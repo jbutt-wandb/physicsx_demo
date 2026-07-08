@@ -1,0 +1,29 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.DS_Store
+
+# Virtual environments
+.venv
+.env
+
+# W&B local artifacts
+wandb/
+data/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+context/
+notebooks/archive
+notebooks/artifacts
+notebooks/wandb_emea
+
+src/*
+
+main.py
+uv.lock
