@@ -367,11 +367,10 @@ workloads.
 | ShapeNet Car  | 3D, unstructured | 32 186          | Estimate surface pressure + volume velocity from car geometry |
 | AirfRANS      | 2D, unstructured | 32 000          | Airfoil lift/drag under varying AoA and Reynolds number |
 
-**AirfRANS** is the real dataset that the workshop's synthetic NACA
-airfoil generator is patterned after. Bonnet et al. (2022) provide
-high-fidelity RANS on NACA airfoils; the repo keeps an optional
-`[airfrans]` dependency for teams that want to swap the toy generator
-for real CFD data.
+The workshop now uses a laptop-sized, HiLiftAeroML-inspired CRM-HL
+high-lift section generator. AirfRANS remains a useful 2D real-CFD
+stepping stone if teams want a smaller public dataset before moving
+to large high-lift aircraft data.
 
 **ShapeNet Car** is a synthetic wind-tunnel dataset over ShapeNet
 car geometries, historically used in graph-network surrogate papers.

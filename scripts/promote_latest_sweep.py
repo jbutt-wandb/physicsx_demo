@@ -23,7 +23,7 @@ if SRC_PATH not in sys.path:
 from physicsx_demo.utils.env import load_local_env, resolve_wandb_target
 
 
-REGISTRY_NAME = "airfoil_surrogates"
+REGISTRY_NAME = "high_lift_surrogates"
 TUNED_COLLECTION = "model_hyperparameter_tuned"
 CHECKPOINT_COLLECTION = "checkpoints"
 
@@ -54,11 +54,12 @@ def find_latest_sweep_setup(api: wandb.Api, path: str):
     setup_runs = list(
         api.runs(
             path,
-            filters={"display_name": "sweep-setup", "tags": "sweep", "state": "finished"},
+            filters={"tags": "sweep", "state": "finished"},
             order="-created_at",
             per_page=20,
         )
     )
+    setup_runs = [run for run in setup_runs if run.name in {"sweep-setup", "kpi-sweep-setup"}]
     return setup_runs[0] if setup_runs else None
 
 
@@ -75,13 +76,13 @@ def find_best_candidate(api: wandb.Api, path: str, *, since: datetime | None):
     for run in runs:
         artifact_ref = run.summary.get("model_checkpoint/artifact")
         selection_score = finite_summary_float(run, "val/selection_score")
-        pressure_rmse = finite_summary_float(run, "val/pressure_rmse")
+        cl_rmse = finite_summary_float(run, "val/cl_rmse")
         created_at = parse_wandb_time(run.created_at)
         if not artifact_ref or not math.isfinite(selection_score):
             continue
         if since is not None and created_at < since:
             continue
-        candidates.append((selection_score, pressure_rmse, created_at, run, artifact_ref))
+        candidates.append((selection_score, cl_rmse, created_at, run, artifact_ref))
 
     if not candidates:
         raise RuntimeError("No viable finished sweep candidate runs found.")
@@ -130,7 +131,7 @@ def main() -> None:
     print(f"winner: {best_run.name} ({best_run.id})")
     print(f"winner sweep: {run_sweep_id(best_run)}")
     print(f"val/selection_score: {best_score:.6f}")
-    print(f"val/pressure_rmse: {best_rmse:.6f}")
+    print(f"val/cl_rmse: {best_rmse:.6f}")
     print(f"artifact: {artifact_ref}")
 
     if args.dry_run:
@@ -151,7 +152,7 @@ def main() -> None:
         promo_run.summary["sweep/winner_run"] = best_run.name
         promo_run.summary["sweep/winner_run_id"] = best_run.id
         promo_run.summary["sweep/winner_selection_score"] = best_score
-        promo_run.summary["sweep/winner_pressure_rmse"] = best_rmse
+        promo_run.summary["sweep/winner_cl_rmse"] = best_rmse
         promo_run.summary["sweep/winner_artifact"] = artifact_ref
         promo_run.summary["sweep/candidate_window"] = source_desc
         promo_run.summary["model_registry/path"] = target_path

@@ -15,6 +15,7 @@ wheels/
 wandb/
 wandb_downloads/
 data/
+artifacts/
 
 # Notebook checkpoints
 .ipynb_checkpoints/

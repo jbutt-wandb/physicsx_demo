@@ -127,6 +127,51 @@ class PointwiseMLP(nn.Module):
         return self.net(features)
 
 
+class TinyTransolverKpi(nn.Module):
+    """TinyTransolver wrapper for one-vector CL/CD/CM prediction from design tokens."""
+
+    def __init__(
+        self,
+        in_dim: int = 7,
+        out_dim: int = 3,
+        hidden: int = 64,
+        n_layers: int = 3,
+        n_slices: int = 8,
+        n_heads: int = 4,
+        ffn_expansion: int = 2,
+        dropout: float = 0.05,
+        use_global_context: bool = True,
+    ):
+        super().__init__()
+        self.backbone = TinyTransolver(
+            in_dim=in_dim,
+            out_dim=out_dim,
+            hidden=hidden,
+            n_layers=n_layers,
+            n_slices=n_slices,
+            n_heads=n_heads,
+            ffn_expansion=ffn_expansion,
+            dropout=dropout,
+            use_global_context=use_global_context,
+        )
+
+    def forward(self, features: torch.Tensor, return_slice_weights: bool = False):
+        if return_slice_weights:
+            token_pred, weights = self.backbone(features, return_slice_weights=True)
+            return token_pred.mean(dim=1), weights
+        return self.backbone(features).mean(dim=1)
+
+
+class KpiTokenMLP(nn.Module):
+    """Pointwise-token baseline for KPI prediction with the same mean pooling."""
+
+    def __init__(self, in_dim: int = 7, out_dim: int = 3, hidden: int = 64, depth: int = 3, dropout: float = 0.05):
+        super().__init__()
+        self.token_mlp = PointwiseMLP(in_dim=in_dim, out_dim=out_dim, hidden=hidden, depth=depth, dropout=dropout)
+
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
+        return self.token_mlp(features).mean(dim=1)
+
+
 def count_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
-

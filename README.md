@@ -5,12 +5,15 @@ tailored to PhysicsX's neural-field CFD surrogate workflow. Everything
 attendees need lives in `notebooks/` and `src/physicsx_demo/utils/`:
 the notebooks are thin orchestration layers, the shared code is
 importable, and the full flow runs on a laptop CPU against a small
-`TinyTransolver` model trained on synthetic NACA airfoil data.
+`TinyTransolverKpi` model trained on the public HiLiftAeroML KPI CSVs.
+The synthetic CRM-HL field utilities remain available as compact visual
+companions when you want pressure/velocity media without downloading
+large VTU files.
 
 **Target W&B project:** `wandb_emea/jb_physics_demo`
-**Registry entry point:** `wandb-registry-airfoil_surrogates`
+**Registry entry point:** `wandb-registry-high_lift_surrogates`
 
-![PhysicsX W&B workshop overview](docs/assets/readme_hero.png)
+![PhysicsX W&B workshop overview](docs/assets/readme_hero.svg)
 
 ## Quickstart
 
@@ -32,7 +35,7 @@ uv run python scripts/audit_workshop.py
 
 ```mermaid
 flowchart LR
-    A[registry.ipynb<br/>create synthetic airfoil dataset] --> B[experiment_tracking.ipynb<br/>train TinyTransolver + MLP baseline]
+    A[registry.ipynb<br/>register real HiLift KPI dataset] --> B[experiment_tracking.ipynb<br/>train TinyTransolverKpi + MLP baseline]
     B --> C[sweeps.ipynb<br/>fine-tune registered checkpoint]
     B --> D[reports.ipynb<br/>curate the training story]
     C --> D
@@ -46,9 +49,9 @@ flowchart LR
 
 | # | Notebook | W&B capability | What it does |
 | - | -------- | -------------- | ------------ |
-| 1 | `notebooks/registry.ipynb` | **Registry (datasets)** | Generates the synthetic NACA airfoil dataset and promotes it to `wandb-registry-airfoil_surrogates/datasets:production`. |
-| 2 | `notebooks/experiment_tracking.ipynb` | **Runs, artifacts, Tables, media, Workspace** | Pulls the dataset from the Registry, trains an ~896k-param global-context `TinyTransolver` for 32 epochs, compares it with a pointwise MLP baseline, logs per-epoch model artifacts, promotes the best checkpoint to `wandb-registry-airfoil_surrogates/checkpoints:production`, and saves the curated four-section W&B Workspace for the live demo. If the baseline wins the composite guardrail score, it is logged and linked separately under `baselines`. |
-| 3 | `notebooks/sweeps.ipynb` | **Sweeps + Models Registry** | Loads `checkpoints:production`, runs an 8-trial Bayesian sweep over `lr`, `weight_decay`, `lambda_slice_usage`, `lambda_slice_sharpness`, and `batch_size`, optimizes the composite `val/selection_score`, logs every trial checkpoint as a model artifact candidate, then links the winning checkpoint into `wandb-registry-airfoil_surrogates/model_hyperparameter_tuned:production`. |
+| 1 | `notebooks/registry.ipynb` | **Registry (datasets)** | Promotes the real HiLiftAeroML KPI CSV bundle to `wandb-registry-high_lift_surrogates/datasets:production`. |
+| 2 | `notebooks/experiment_tracking.ipynb` | **Runs, artifacts, Tables, media, Workspace** | Pulls the real KPI dataset from the Registry, trains `TinyTransolverKpi`, compares it with a pooled-token MLP baseline, logs coefficient RMSE and prediction media, promotes the best checkpoint to `wandb-registry-high_lift_surrogates/checkpoints:production`, and saves a curated W&B Workspace. |
+| 3 | `notebooks/sweeps.ipynb` | **Sweeps + Models Registry** | Loads `checkpoints:production`, runs an 8-trial Bayesian sweep over `lr`, `weight_decay`, and `batch_size`, optimizes `val/selection_score`, logs every trial checkpoint as a model artifact candidate, then links the winning checkpoint into `wandb-registry-high_lift_surrogates/model_hyperparameter_tuned:production`. |
 | 4 | `notebooks/reports.ipynb` | **Reports API** | Programmatically generates a shareable Report over the training run's metrics and media panels using `wandb_workspaces.reports.v2`. |
 
 Every notebook uses `with wandb.init(...) as run:` context managers, so
@@ -58,29 +61,27 @@ strict about ordering.
 
 ## Model + dataset
 
-![TinyTransolver architecture overview](docs/assets/readme_tinytransolver.png)
+![TinyTransolver architecture overview](docs/assets/readme_tinytransolver.svg)
 
 ```mermaid
 flowchart TB
-    subgraph Dataset["Synthetic airfoil dataset"]
-        G[NACA shape parameters<br/>camber, camber position, thickness]
-        P[Point cloud samples<br/>x, y, signed distance]
-        C[Case conditions<br/>angle of attack, Reynolds number]
-        T[Targets<br/>pressure, u, v]
-        G --> P
+    subgraph Dataset["Real HiLiftAeroML KPI dataset"]
+        G[Eight high-lift design variables<br/>flap/slat deflection and gap]
+        C[Case condition<br/>angle of attack]
+        T[Targets<br/>CL, CD, CM]
         G --> T
         C --> T
     end
 
     subgraph Models["Training comparison"]
-        MLP[Pointwise MLP<br/>local features only]
-        TX[TinyTransolver<br/>global slice context]
-        LOSS[Physics-weighted objective<br/>pressure + near-surface emphasis]
+        MLP[Pooled-token MLP<br/>no Physics-Attention]
+        TX[TinyTransolverKpi<br/>design-token slice context]
+        LOSS[Coefficient objective<br/>normalised CL/CD/CM MSE]
     end
 
-    P --> MLP
+    G --> MLP
     C --> MLP
-    P --> TX
+    G --> TX
     C --> TX
     LOSS --> TX
     MLP --> E[Baseline guardrail metrics]
@@ -88,27 +89,35 @@ flowchart TB
     E --> R[(W&B Models<br/>production checkpoint)]
 ```
 
-- **Model.** A downscaled Transolver — 6 Physics-Attention layers,
-  hidden dim 128, 64 slices, a global context path, ~896k parameters. Consumes
-  `(x, y, sdf, aoa, log_re)` per point and predicts
-  `(pressure, u, v)`. Full description of the Physics-Attention
-  mechanism is in `docs/explainers/pxtransolver.md`. The tracking
-  notebook trains it with a pressure/channel + near-surface weighted
-  MSE, while keeping the pointwise MLP baseline on plain MSE. It also
-  logs field-relative-L2, slice-health, lift/drag proxy, and composite
-  selection-score metrics for a more honest workshop readout.
-- **Dataset.** Synthetic NACA-4-digit airfoils with analytic
+- **Real KPI model.** `TinyTransolverKpi` uses the same Physics-Attention
+  blocks on eight HiLiftAeroML design-variable tokens: inboard/outboard
+  flap deflection, flap gap, slat deflection, and slat gap. Angle of
+  attack is broadcast as a condition, and the pooled output predicts
+  `cl`, `cd`, and `cm`. Splits are grouped by `GeoID`, so validation and
+  test rows come from held-out aircraft variants rather than shuffled
+  angles from already-seen geometries. The training notebook logs
+  physical RMSE for each coefficient, drag polar media, prediction
+  tables, a pooled-token MLP baseline, and a best-checkpoint Registry
+  promotion.
+- **Field model.** The repo still includes a downscaled point-field
+  `TinyTransolver` for synthetic pressure/velocity demos. It consumes
+  `(x, y, sdf, aoa, log_re)` per point and predicts `(pressure, u, v)`.
+  Full description of the Physics-Attention mechanism is in
+  `docs/explainers/pxtransolver.md`.
+- **Synthetic field dataset.** Synthetic CRM-HL-style high-lift sections, inspired by
+  the HiLiftAeroML / NASA CRM-HL Transolver++ use case, with analytic
   pressure and velocity fields (clipped near singularities), plus a
-  hidden global wake/circulation component derived from airfoil shape.
+  hidden global wake/circulation component derived from the high-lift
+  configuration.
   That hidden component makes the task less trivially pointwise: a
   model with cross-point context can infer it from the full point cloud,
   while a per-point MLP only sees local `(x, y, sdf, aoa, log_re)`.
   80 cases × 512 points, split 80/20 into train/val. Serialised as JSON
   so the payload is self-describing. Each case also carries the hidden
-  NACA-style shape parameters used for visualization, so W&B media can
-  render clean airfoil silhouettes rather than noisy sample-point
-  clouds. The dataset artifact also includes `airfoil_shape_sections`,
-  an artifact-backed `wandb.Table` with airfoil profile images and
+  CRM-HL-style section parameters used for visualization, so W&B media can
+  render clean high-lift section silhouettes rather than noisy sample-point
+  clouds. The dataset artifact also includes `high_lift_shape_sections`,
+  an artifact-backed `wandb.Table` with high-lift section images and
   chordwise section images for physical inspection.
 
 ## Docs and explainers
@@ -128,13 +137,15 @@ flowchart TB
 The notebooks are intentionally thin orchestration layers. Reusable
 workshop code lives under `src/physicsx_demo/utils/`:
 
-- `data.py` — `AirfoilCase`, synthetic NACA dataset generation,
+- `data.py` — `HighLiftCase`, synthetic CRM-HL dataset generation,
   JSON payload helpers, train/val splitting, tensor stacking.
+- `hilift_kpi.py` — real HiLiftAeroML KPI CSV loading, geometry-held-out
+  splits, normalization, and geometry-token datasets for `cl/cd/cm`.
 - `model.py` — `PhysicsAttention`, `TinyTransolver`, pointwise MLP
-  baseline, parameter counting.
+  baseline, `TinyTransolverKpi`, KPI token baseline, parameter counting.
 - `metrics.py` — relative L2, slice regularisation diagnostics,
   pressure-force proxies, composite selection score.
-- `viz.py` — airfoil profiles, comparison/error plots, scorecards,
+- `viz.py` — high-lift sections, comparison/error plots, scorecards,
   slice assignment frames, W&B-ready image/video helpers.
 - `training.py` — the full experiment-tracking training routine with
   rich W&B media, Tables, artifacts, and Registry promotion.
@@ -150,12 +161,44 @@ Runtime dependencies (from `pyproject.toml`):
 
 The notebooks are CPU-friendly by default. Optional extras:
 
+- `[realdata]` — installs Hugging Face download support for a real
+  HiLiftAeroML subset from `nvidia/HiLiftAeroML`.
 - `[airfrans]` — the real AirfRANS dataset (Bonnet et al. 2022) if
   you want to swap the synthetic generator.
 - `[notebooks]` — installs `jupyter` if you'd rather not rely on your
   existing Jupyter install.
 
 Install any extra with `uv sync --extra <name>`.
+
+## Real HiLiftAeroML Slice
+
+The full HiLiftAeroML repository is too large for a live workshop
+download, so use the guarded subset helper first:
+
+```bash
+uv sync --extra realdata
+uv run python scripts/download_hilift_subset.py --include-images
+uv run python scripts/download_hilift_subset.py --include-images --execute
+```
+
+By default this selects geometry IDs `1-4` at AoA `4,8,12,16,20`,
+plus root summary CSVs and split manifests. It does **not** download
+the per-run boundary or volume archives unless you explicitly ask for
+them; those are tens of GB per run.
+
+Once the root CSVs are local, run the real KPI training preflight:
+
+```bash
+uv run python scripts/train_hilift_kpi.py --data-dir data/hiliftaeroml_subset --n-geometries 80 --epochs 80
+```
+
+That script follows the Transolver++ tutorial pattern: merge
+`force_mom_all.csv` with `geo_values_all.csv`, hold out entire
+geometries, encode the eight high-lift design variables as semantic
+tokens, and predict `cl`, `cd`, and `cm`. Use it as the real-data
+backbone for the workshop; use the synthetic point-field path when you
+need compact pressure/velocity visualizations without downloading
+13 GB boundary archives.
 
 ## Presenter preflight
 
@@ -178,37 +221,37 @@ fresh against the current Registry state.
 
 ## What lives in the Registry after a full run
 
-`wandb-registry-airfoil_surrogates` on `wandb_emea`:
+`wandb-registry-high_lift_surrogates` on `wandb_emea`:
 
 ![W&B Models lineage](docs/assets/readme_wandb_lineage.png)
 
 ```mermaid
 flowchart LR
-    D[(datasets:production)] --> T[tiny-transolver-train run]
+    D[(datasets:production)] --> T[tiny-transolver-kpi-train run]
     T --> C[(checkpoints:production)]
-    T --> M[W&B Tables + Images + Video<br/>case diagnostics, profiles, slice evolution]
+    T --> M[W&B Tables + Images<br/>coefficient predictions, drag polars]
     C --> S[sweep trials]
-    S --> A[checkpoint candidates<br/>airfoil_surrogate_ckpt_tuned]
+    S --> A[checkpoint candidates<br/>high_lift_kpi_surrogate_ckpt_tuned]
     A --> P[sweep-winner-promotion run]
     P --> H[(model_hyperparameter_tuned:production)]
     C --> R[Reports and downstream consumers]
     H --> R
 ```
 
-- `datasets/synthetic_airfoil_slice` — aliases `production`, `v1`.
-  Includes `synthetic_airfoil_slice.json`, `airfoil_profile_gallery.png`,
-  and the `airfoil_shape_sections` media table.
-- `checkpoints/airfoil_surrogate_ckpt` — best-val version aliased
+- `datasets/hilift_kpi_slice` — aliases `production`, `real-kpi`, `v1`.
+  Includes `force_mom_all.csv`, `geo_values_all.csv`, split manifests,
+  coefficient preview tables, and lightweight wall-shear preview images.
+- `checkpoints/high_lift_kpi_surrogate_ckpt` — best-val version aliased
   `production` + `epoch-N`.
-- `model_hyperparameter_tuned/airfoil_surrogate_ckpt_tuned` —
+- `model_hyperparameter_tuned/high_lift_kpi_surrogate_ckpt_tuned` —
   the best sweep checkpoint linked by `sweep-winner-promotion`, aliased
   `production`, `sweep-winner`, `sweep-<id>`, and `run-<id>`.
-- `baselines/pointwise_mlp_baseline_ckpt` — created only if the
-  baseline beats TinyTransolver on the composite guardrail score.
+- `baselines/kpi_token_mlp_baseline_ckpt` — created only if the
+  baseline beats TinyTransolverKpi on the validation guardrail score.
 
 Downstream consumers (attendees' own code, future notebooks, external
 projects) resolve each artifact at
-`wandb-registry-airfoil_surrogates/{collection}:production`.
+`wandb-registry-high_lift_surrogates/{collection}:production`.
 
 ## License
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
   <title id="title">TinyTransolver architecture</title>
-  <desc id="desc">A refined architecture diagram showing airfoil point features, learned physics slices, slice-level attention, deslicing, and field outputs.</desc>
+  <desc id="desc">A refined architecture diagram showing HiLift design tokens, learned physics slices, slice-level attention, pooling, and coefficient outputs.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ffffff"/>
@@ -33,23 +33,23 @@
 
   <rect width="1280" height="640" rx="30" fill="url(#bg)"/>
   <g class="font" transform="translate(54 54)">
-    <text class="title" x="0" y="0">TinyTransolver model path</text>
-    <text class="subtitle" x="0" y="32">A small Physics-Attention surrogate that turns unordered airfoil points into pressure and velocity fields.</text>
+    <text class="title" x="0" y="0">TinyTransolverKpi model path</text>
+    <text class="subtitle" x="0" y="32">A small Physics-Attention surrogate that turns high-lift design tokens into CL/CD/CM predictions.</text>
   </g>
 
   <g transform="translate(54 126)">
     <g filter="url(#shadow)">
       <rect x="0" y="0" width="214" height="296" rx="22" fill="#ffffff" stroke="#e2e8f0"/>
       <text class="font h" x="24" y="40">Input tokens</text>
-      <text class="font p" x="24" y="66">512 unordered points</text>
-      <text class="font code" x="24" y="95">(x, y, sdf, aoa, log_re)</text>
+      <text class="font p" x="24" y="66">8 design tokens + AoA</text>
+      <text class="font code" x="24" y="95">(feature, station, value)</text>
       <rect x="24" y="122" width="166" height="108" rx="18" fill="#e0f2fe"/>
       <path d="M42 176 C76 142 132 146 174 166 C186 172 194 176 204 169 C184 193 146 200 92 192 C66 188 50 180 42 176 Z" fill="url(#field)"/>
       <path d="M42 176 C76 142 132 146 174 166 C186 172 194 176 204 169 M42 176 C92 194 150 199 204 169" fill="none" stroke="#082f49" stroke-width="2"/>
       <g fill="#0f766e" opacity=".45">
         <circle cx="56" cy="136" r="3"/><circle cx="78" cy="222" r="3"/><circle cx="118" cy="132" r="3"/><circle cx="158" cy="224" r="3"/><circle cx="184" cy="140" r="3"/>
       </g>
-      <text class="font p" x="24" y="260">Geometry and conditions</text>
+      <text class="font p" x="24" y="260">Flap/slat geometry tokens</text>
     </g>
 
     <path d="M235 148 H308" stroke="#0f766e" stroke-width="4" marker-end="url(#arrow)"/>
@@ -95,20 +95,20 @@
 
     <g filter="url(#shadow)" transform="translate(994 0)">
       <rect width="214" height="296" rx="22" fill="#ffffff" stroke="#e2e8f0"/>
-      <text class="font h" x="24" y="40">Deslice + head</text>
-      <text class="font p" x="24" y="66">broadcast back to points</text>
+      <text class="font h" x="24" y="40">Pool + head</text>
+      <text class="font p" x="24" y="66">aggregate slice context</text>
       <rect x="24" y="104" width="166" height="118" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
       <rect x="42" y="126" width="130" height="18" rx="9" fill="#dbeafe"/>
       <rect x="42" y="158" width="92" height="18" rx="9" fill="#ccfbf1"/>
       <rect x="42" y="190" width="116" height="18" rx="9" fill="#fef3c7"/>
-      <text class="font code" x="24" y="254">(pressure, u, v)</text>
+      <text class="font code" x="24" y="254">(CL, CD, CM)</text>
     </g>
   </g>
 
   <g class="font" transform="translate(54 486)">
     <rect x="0" y="-30" width="1172" height="104" rx="18" fill="#ffffff" stroke="#e2e8f0"/>
     <text x="24" y="8" fill="#0f172a" font-size="16" font-weight="850">Why it matters:</text>
-    <text x="154" y="8" fill="#475569" font-size="16">the pointwise MLP sees local coordinates only.</text>
-    <text x="24" y="42" fill="#475569" font-size="16">TinyTransolver routes information through learned physics slices, so it can infer global wake and shape context.</text>
+    <text x="154" y="8" fill="#475569" font-size="16">the pooled-token MLP compresses the design variables directly.</text>
+    <text x="24" y="42" fill="#475569" font-size="16">TinyTransolverKpi routes semantic flap/slat tokens through learned slices before predicting aerodynamic coefficients.</text>
   </g>
 </svg>

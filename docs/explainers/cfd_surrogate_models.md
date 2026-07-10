@@ -968,10 +968,10 @@ Not solutions, pointers. Work through in order.
    loss curves to W&B and compare. Reproducing Tancik et al. (2020)
    at toy scale is the fastest way to internalise why positional
    encoding matters.
-3. Start with the workshop's synthetic NACA dataset, then repeat on
-   AirfRANS if you have the optional data installed: train a point-wise
-   MLP surrogate, compute `C_L` error alongside RMSE, verify that they
-   move together most of the time — and find a run where they don't.
+3. Start with the workshop's synthetic CRM-HL high-lift dataset, then
+   repeat on AirfRANS or a HiLiftAeroML subset: train a point-wise MLP
+   surrogate, compute `C_L` error alongside RMSE, verify that they move
+   together most of the time — and find a run where they don't.
 4. Read the FNO paper (Li et al. 2021). Sketch the diagram of an FNO
    layer from memory. Compare your sketch to Figure 2 of the paper.
 5. Take one of your Stage-2 fine-tuned models and evaluate it on
@@ -992,5 +992,6 @@ The short list, if you only have time for four:
 - **Sitzmann et al. (2020)** — SIREN, and the neural-field mechanism
   in its cleanest form.
 - **Li et al. (2021)** — FNO, the entry to the neural-operator line.
-- **Bonnet et al. (2022)** — AirfRANS, the real CFD sibling of the
-  workshop's synthetic NACA airfoil dataset.
+- **HiLiftAeroML / NASA CRM-HL** — the real high-lift aircraft
+  surrogate use case that motivates the workshop's synthetic section
+  generator.

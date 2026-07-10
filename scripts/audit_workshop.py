@@ -25,9 +25,9 @@ from physicsx_demo.utils.env import load_local_env, resolve_wandb_target
 
 
 REGISTRY_REFS = {
-    "dataset": "wandb-registry-airfoil_surrogates/datasets:production",
-    "checkpoint": "wandb-registry-airfoil_surrogates/checkpoints:production",
-    "tuned": "wandb-registry-airfoil_surrogates/model_hyperparameter_tuned:production",
+    "dataset": "wandb-registry-high_lift_surrogates/datasets:production",
+    "checkpoint": "wandb-registry-high_lift_surrogates/checkpoints:production",
+    "tuned": "wandb-registry-high_lift_surrogates/model_hyperparameter_tuned:production",
 }
 
 
@@ -95,11 +95,11 @@ def main() -> None:
             blockers.append(f"missing Registry artifact {ref}: {type(exc).__name__}: {exc}")
 
     latest_training = next(
-        iter(api.runs(path, filters={"display_name": "tiny-transolver-train", "state": "finished"}, order="-created_at", per_page=1)),
+        iter(api.runs(path, filters={"display_name": "tiny-transolver-kpi-train", "state": "finished"}, order="-created_at", per_page=1)),
         None,
     )
     if latest_training is None:
-        blockers.append("no finished tiny-transolver-train run found")
+        blockers.append("no finished tiny-transolver-kpi-train run found")
     else:
         model_score = finite_summary_float(latest_training, "model/best_selection_score")
         baseline_score = finite_summary_float(latest_training, "baseline/best_selection_score")
@@ -117,8 +117,8 @@ def main() -> None:
         if tuned_logged_by_time < latest_training_time:
             blockers.append("tuned production promotion predates the latest successful training run")
         tuned_metadata = dict(artifacts["tuned"].metadata or {})
-        if "val_selection_score" not in tuned_metadata:
-            blockers.append("tuned production artifact is missing val_selection_score metadata")
+        if not any(key in tuned_metadata for key in ["val_selection_score", "selection_score", "val_mse"]):
+            blockers.append("tuned production artifact is missing selection-score metadata")
 
     reports = list(api.reports(path=path, per_page=10))
     if not reports:

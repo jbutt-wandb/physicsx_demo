@@ -5,7 +5,7 @@ import math
 import numpy as np
 import torch
 
-from physicsx_demo.utils.data import AirfoilCase
+from physicsx_demo.utils.data import HighLiftCase
 
 
 def relative_l2(pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
@@ -74,13 +74,14 @@ def spearman_corr(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.sum(ra * rb) / denom)
 
 
-def pressure_force_proxy(case: AirfoilCase, field: np.ndarray) -> dict[str, float]:
-    """Approximate pressure-force coefficients from near-surface points."""
+def pressure_force_proxy(case: HighLiftCase, field: np.ndarray) -> dict[str, float]:
+    """Approximate pressure-force coefficients from near-surface high-lift points."""
     pressure = field[:, 0]
     near = case.sdf <= np.quantile(case.sdf, 0.25)
     pts = case.points[near]
     p = pressure[near]
-    radial = pts - np.array([0.5, 0.0], dtype=np.float32)
+    center = pts.mean(axis=0, keepdims=True)
+    radial = pts - center
     normals = radial / (np.linalg.norm(radial, axis=1, keepdims=True) + 1e-6)
     force = (-p[:, None] * normals).mean(axis=0)
     flow_dir = np.array([math.cos(case.aoa), math.sin(case.aoa)], dtype=np.float32)
@@ -91,7 +92,7 @@ def pressure_force_proxy(case: AirfoilCase, field: np.ndarray) -> dict[str, floa
     }
 
 
-def proxy_metrics(cases: list[AirfoilCase], pred_fields: np.ndarray) -> dict[str, float]:
+def proxy_metrics(cases: list[HighLiftCase], pred_fields: np.ndarray) -> dict[str, float]:
     truth_lift, pred_lift, truth_drag, pred_drag = [], [], [], []
     for case, pred in zip(cases, pred_fields):
         truth = np.concatenate([case.pressure[:, None], case.velocity], axis=1)
@@ -112,4 +113,3 @@ def proxy_metrics(cases: list[AirfoilCase], pred_fields: np.ndarray) -> dict[str
         "val/lift_proxy_spearman": spearman_corr(truth_lift, pred_lift),
         "val/drag_proxy_spearman": spearman_corr(truth_drag, pred_drag),
     }
-

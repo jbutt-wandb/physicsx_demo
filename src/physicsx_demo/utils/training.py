@@ -26,10 +26,10 @@ from physicsx_demo.utils.metrics import (
 )
 from physicsx_demo.utils.model import count_params
 from physicsx_demo.utils.viz import (
-    airfoil_gallery_figure,
-    airfoil_profile_figure,
     comparison_figure,
     error_figure,
+    high_lift_gallery_figure,
+    high_lift_profile_figure,
     save_figure_png,
     save_frame_png,
     scorecard_figure,
@@ -79,6 +79,7 @@ def run_training_experiment(
         "surface_weight_scale": 2.0,
         "surface_weight_decay": 0.08,
         "grad_clip_norm": 1.0,
+        "use_case": "HiLiftAeroML-inspired CRM-HL high-lift surrogate",
         "selection_score": "pressure_rmse + 0.35*field_relative_l2 + 0.20*lift_proxy_mae + 0.10*drag_proxy_mae",
         "training_objective": "TinyTransolver uses pressure/channel + near-surface weighted MSE; baseline keeps plain pointwise MSE",
         "n_cases": len(train_cases),
@@ -95,7 +96,7 @@ def run_training_experiment(
     X_train, Y_train = stack_cases(train_cases)
     X_val, Y_val = stack_cases(val_cases)
 
-    CHECKPOINT_ARTIFACT_NAME = "airfoil_surrogate_ckpt"
+    CHECKPOINT_ARTIFACT_NAME = "high_lift_surrogate_ckpt"
     BASELINE_ARTIFACT_NAME = "pointwise_mlp_baseline_ckpt"
     CHECKPOINT_COLLECTION = "checkpoints"
     BASELINE_COLLECTION = "baselines"
@@ -119,56 +120,56 @@ def run_training_experiment(
         # Make the physical shape obvious in the run before training metrics arrive.
         # File-backed wandb.Image objects are the most reliable way to render media in Tables.
         gallery_cases = list(val_cases[:8]) + list(train_cases[:4])
-        airfoil_columns = ["case_id", "split", "aoa_deg", "re", "airfoil_profile"]
-        airfoil_table = wandb.Table(columns=airfoil_columns)
-        airfoil_artifact_table = wandb.Table(columns=airfoil_columns)
+        section_columns = ["case_id", "split", "aoa_deg", "re", "high_lift_section"]
+        section_table = wandb.Table(columns=section_columns)
+        section_artifact_table = wandb.Table(columns=section_columns)
         for i, c in enumerate(gallery_cases):
             split = "val" if i < min(8, len(val_cases)) else "train"
-            fig = airfoil_profile_figure(c, title=f"{split} case {i} airfoil profile")
-            profile_path = save_figure_png(fig, media_dir / "airfoil_profiles", f"{split}_case_{i:02d}_airfoil_profile")
+            fig = high_lift_profile_figure(c, title=f"{split} case {i} high-lift section")
+            profile_path = save_figure_png(fig, media_dir / "high_lift_sections", f"{split}_case_{i:02d}_high_lift_section")
             plt.close(fig)
             caption = f"{split} case {i} - AoA {math.degrees(c.aoa):.1f} deg"
             row = [i, split, float(math.degrees(c.aoa)), float(c.re)]
-            airfoil_table.add_data(*row, wandb.Image(str(profile_path), caption=caption))
-            airfoil_artifact_table.add_data(*row, wandb.Image(str(profile_path), caption=caption))
+            section_table.add_data(*row, wandb.Image(str(profile_path), caption=caption))
+            section_artifact_table.add_data(*row, wandb.Image(str(profile_path), caption=caption))
 
-        fig_gallery = airfoil_gallery_figure(gallery_cases, "Airfoil profile gallery - validation and train samples")
-        gallery_path = save_figure_png(fig_gallery, media_dir / "airfoil_profiles", "airfoil_profile_gallery")
+        fig_gallery = high_lift_gallery_figure(gallery_cases, "High-lift section gallery - validation and train samples")
+        gallery_path = save_figure_png(fig_gallery, media_dir / "high_lift_sections", "high_lift_section_gallery")
         plt.close(fig_gallery)
 
-        fig_reference_profile = airfoil_profile_figure(val_cases[0], title="canonical validation airfoil")
+        fig_reference_profile = high_lift_profile_figure(val_cases[0], title="canonical validation high-lift section")
         reference_profile_path = save_figure_png(
             fig_reference_profile,
-            media_dir / "airfoil_profiles",
-            "canonical_validation_airfoil_profile",
+            media_dir / "high_lift_sections",
+            "canonical_validation_high_lift_section",
         )
         plt.close(fig_reference_profile)
 
-        airfoil_media_artifact = wandb.Artifact(
-            "workshop_airfoil_profiles",
+        section_media_artifact = wandb.Artifact(
+            "workshop_high_lift_sections",
             type="media-table",
-            description="Airfoil profile gallery and image table for the PhysicsX workshop.",
+            description="HiLiftAeroML-inspired high-lift section gallery and image table for the PhysicsX workshop.",
         )
-        airfoil_media_artifact.add(airfoil_artifact_table, "airfoil_profiles")
-        airfoil_media_artifact.add_file(str(gallery_path), name="airfoil_profile_gallery.png")
-        airfoil_media_artifact.add_file(str(reference_profile_path), name="canonical_validation_airfoil_profile.png")
-        logged_airfoil_media = run.log_artifact(airfoil_media_artifact, aliases=["latest"])
+        section_media_artifact.add(section_artifact_table, "high_lift_sections")
+        section_media_artifact.add_file(str(gallery_path), name="high_lift_section_gallery.png")
+        section_media_artifact.add_file(str(reference_profile_path), name="canonical_validation_high_lift_section.png")
+        logged_section_media = run.log_artifact(section_media_artifact, aliases=["latest"])
 
         wandb.log({
-            "dataset/canonical_airfoil_profile": wandb.Image(
+            "dataset/canonical_high_lift_section": wandb.Image(
                 str(reference_profile_path),
-                caption="Static geometry reference - logged once because the airfoil shape does not change by epoch.",
+                caption="Static CRM-HL-style geometry reference - logged once because the section shape does not change by epoch.",
             ),
-            "workshop/airfoil_profile_reference": wandb.Image(
+            "workshop/high_lift_section_reference": wandb.Image(
                 str(reference_profile_path),
-                caption="Static airfoil shape reference",
+                caption="Static high-lift section reference",
             ),
-            "workshop/airfoil_profile_gallery": wandb.Image(str(gallery_path), caption="Airfoil shape gallery"),
-            "workshop/airfoil_profiles_table": airfoil_table,
+            "workshop/high_lift_section_gallery": wandb.Image(str(gallery_path), caption="High-lift section gallery"),
+            "workshop/high_lift_sections_table": section_table,
         })
-        run.summary["workshop/airfoil_profiles_artifact"] = "workshop_airfoil_profiles:latest"
-        run.summary["workshop/airfoil_profile_note"] = (
-            "Airfoil geometry is a fixed dataset input; epoch sliders are reserved for model outputs "
+        run.summary["workshop/high_lift_sections_artifact"] = "workshop_high_lift_sections:latest"
+        run.summary["workshop/high_lift_section_note"] = (
+            "High-lift geometry is a fixed dataset input; epoch sliders are reserved for model outputs "
             "such as slice usage, slice assignment, pressure comparisons, and error maps."
         )
 
@@ -419,7 +420,7 @@ def run_training_experiment(
             ckpt_artifact = wandb.Artifact(
                 name=CHECKPOINT_ARTIFACT_NAME,
                 type="model",
-                description="TinyTransolver airfoil surrogate checkpoint for the PhysicsX W&B Models workshop.",
+                description="TinyTransolver high-lift surrogate checkpoint for the PhysicsX W&B Models workshop.",
                 metadata={
                     "epoch": epoch,
                     "selection_score": model_score,
@@ -498,7 +499,7 @@ def run_training_experiment(
                     "truth_lift_proxy",
                     "model_drag_proxy",
                     "truth_drag_proxy",
-                    "airfoil_profile",
+                    "high_lift_section",
                     "comparison_image",
                     "error_image",
                     "slice_image",
@@ -514,13 +515,13 @@ def run_training_experiment(
                     model_rmse_i = float(np.sqrt(np.mean((pred_n_np[i, :, 0] - y_val_n_np[i, :, 0]) ** 2)))
                     baseline_rmse_i = float(np.sqrt(np.mean((baseline_pred_n_np[i, :, 0] - y_val_n_np[i, :, 0]) ** 2)))
 
-                    fig_profile_i = airfoil_profile_figure(c, title=f"case {i} profile")
+                    fig_profile_i = high_lift_profile_figure(c, title=f"case {i} high-lift section")
                     fig_cmp = comparison_figure(c, val_pred_np[i], baseline_val_pred_np[i], epoch, i)
                     fig_err = error_figure(c, val_pred_np[i], baseline_val_pred_np[i], epoch, i)
                     slice_argmax_i = last_w[i].argmax(dim=-1).cpu().numpy()
                     fig_slice_i = slice_figure(c, slice_argmax_i, epoch)
 
-                    profile_i_path = save_figure_png(fig_profile_i, epoch_media_dir / "case_diagnostics", f"case_{i:02d}_airfoil_profile")
+                    profile_i_path = save_figure_png(fig_profile_i, epoch_media_dir / "case_diagnostics", f"case_{i:02d}_high_lift_section")
                     cmp_path = save_figure_png(fig_cmp, epoch_media_dir / "case_diagnostics", f"case_{i:02d}_comparison")
                     err_path = save_figure_png(fig_err, epoch_media_dir / "case_diagnostics", f"case_{i:02d}_error")
                     slice_path = save_figure_png(fig_slice_i, epoch_media_dir / "case_diagnostics", f"case_{i:02d}_slice_assignment")
@@ -544,7 +545,7 @@ def run_training_experiment(
                     diagnostics_image_paths = [profile_i_path, cmp_path, err_path, slice_path]
                     comparison_table.add_data(
                         *diagnostics_scalar_row,
-                        wandb.Image(str(profile_i_path), caption=f"case {i} airfoil profile"),
+                        wandb.Image(str(profile_i_path), caption=f"case {i} high-lift section"),
                         wandb.Image(str(cmp_path), caption=f"case {i} prediction comparison"),
                         wandb.Image(str(err_path), caption=f"case {i} error map"),
                         wandb.Image(str(slice_path), caption=f"case {i} slice assignment"),
@@ -627,7 +628,7 @@ def run_training_experiment(
                 case_id = scalar_row[0]
                 diagnostics_artifact_table.add_data(
                     *scalar_row,
-                    wandb.Image(str(profile_i_path), caption=f"case {case_id} airfoil profile"),
+                    wandb.Image(str(profile_i_path), caption=f"case {case_id} high-lift section"),
                     wandb.Image(str(cmp_path), caption=f"case {case_id} prediction comparison"),
                     wandb.Image(str(err_path), caption=f"case {case_id} error map"),
                     wandb.Image(str(slice_path), caption=f"case {case_id} slice assignment"),
@@ -635,7 +636,7 @@ def run_training_experiment(
             diagnostics_artifact = wandb.Artifact(
                 "workshop_case_diagnostics",
                 type="media-table",
-                description="Final validation case diagnostics with airfoil, prediction, error, and slice images.",
+                description="Final validation case diagnostics with high-lift geometry, prediction, error, and slice images.",
                 metadata={"epoch": latest_case_diagnostics_epoch},
             )
             diagnostics_artifact.add(diagnostics_artifact_table, "case_diagnostics_latest")
@@ -694,7 +695,7 @@ def run_training_experiment(
         run.summary["workshop/slice_assignment_artifact"] = "workshop_slice_assignment_frames:latest"
 
         for artifact_ref in [
-            logged_airfoil_media,
+            logged_section_media,
             locals().get("logged_diagnostics_artifact"),
             logged_slice_media,
             logged_usage_media,

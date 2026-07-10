@@ -134,9 +134,8 @@ datasets is transformative. In increasing order of scale:
 
 - **AirfRANS** (Bonnet et al., NeurIPS Datasets 2022). 2D RANS
   simulations of NACA airfoils. Few gigabytes; runs on a laptop. This
-  is the real-data sibling of the synthetic NACA generator used in the
-  workshop notebooks, and the first dataset to try when you outgrow
-  the laptop demo.
+  is a good smaller real-CFD stepping stone before attempting a full
+  high-lift aircraft dataset such as HiLiftAeroML.
 - **PDEBench** (Takamoto et al., NeurIPS Datasets 2022). Broad
   benchmark across many PDEs (Burgers, Darcy, Navier-Stokes, ...).
   Right for comparing model families on the same tasks. Bigger than

@@ -15,21 +15,24 @@ import numpy as np
 import torch
 from PIL import Image
 
-from physicsx_demo.utils.data import AirfoilCase, naca4_camber, naca4_thickness
+from physicsx_demo.utils.data import AirfoilCase, HighLiftCase, high_lift_surfaces
 
 
-def case_shape_params(case: AirfoilCase) -> tuple[float, float, float] | None:
-    params = [getattr(case, key, None) for key in ("m", "p", "t")]
+def case_shape_params(case: HighLiftCase) -> tuple[float, float, float, float, float] | None:
+    params = [
+        getattr(case, key, None)
+        for key in ("main_camber", "main_thickness", "slat_deflection", "flap_deflection", "flap_gap")
+    ]
     if all(value is not None for value in params):
         return tuple(float(value) for value in params)
     return None
 
 
-def fallback_airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def fallback_high_lift_surface(case: HighLiftCase, n: int = 260) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Smooth a visual envelope from near-surface samples for legacy artifacts."""
     near_count = max(90, int(0.24 * case.points.shape[0]))
     near = case.points[np.argsort(case.sdf)[:near_count]]
-    x_grid = np.linspace(0.0, 1.0, n)
+    x_grid = np.linspace(float(np.min(near[:, 0])), float(np.max(near[:, 0])), n)
     upper = np.zeros_like(x_grid)
     lower = np.zeros_like(x_grid)
     for i, x0 in enumerate(x_grid):
@@ -52,22 +55,56 @@ def fallback_airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarra
     lower = camber - half_thickness
     upper[[0, -1]] = camber[[0, -1]]
     lower[[0, -1]] = camber[[0, -1]]
-    return x_grid, upper, lower
+    return {"reconstructed": (np.stack([x_grid, upper], axis=1), np.stack([x_grid, lower], axis=1))}
+
+
+def fallback_airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    curves = fallback_high_lift_surface(case, n=n)
+    upper, lower = curves["reconstructed"]
+    return upper[:, 0], upper[:, 1], lower[:, 1]
+
+
+def high_lift_surface(case: HighLiftCase, n: int = 260) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], bool]:
+    params = case_shape_params(case)
+    if params is None:
+        return fallback_high_lift_surface(case, n=n), False
+    main_camber, main_thickness, slat_deflection, flap_deflection, flap_gap = params
+    return (
+        high_lift_surfaces(
+            main_camber=main_camber,
+            main_thickness=main_thickness,
+            slat_deflection=slat_deflection,
+            flap_deflection=flap_deflection,
+            flap_gap=flap_gap,
+        ),
+        True,
+    )
 
 
 def airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
-    params = case_shape_params(case)
-    x = np.linspace(0.0, 1.0, n)
-    if params is None:
-        return (*fallback_airfoil_surface(case, n=n), False)
-    m, p, t = params
-    yc = naca4_camber(x, m, p)
-    yt = naca4_thickness(x, t)
-    upper = yc + yt
-    lower = yc - yt
-    upper[[0, -1]] = yc[[0, -1]]
-    lower[[0, -1]] = yc[[0, -1]]
-    return x, upper, lower, True
+    curves, exact = high_lift_surface(case, n=n)
+    upper = np.concatenate([pair[0] for pair in curves.values()], axis=0)
+    lower = np.concatenate([pair[1] for pair in curves.values()], axis=0)
+    order_u = np.argsort(upper[:, 0])
+    order_l = np.argsort(lower[:, 0])
+    x = np.linspace(float(min(upper[:, 0].min(), lower[:, 0].min())), float(max(upper[:, 0].max(), lower[:, 0].max())), n)
+    upper_y = np.interp(x, upper[order_u, 0], upper[order_u, 1])
+    lower_y = np.interp(x, lower[order_l, 0], lower[order_l, 1])
+    return x, upper_y, lower_y, exact
+
+
+def _style_high_lift_axis(ax, curves: dict[str, tuple[np.ndarray, np.ndarray]], pad_x: float = 0.04) -> None:
+    all_pts = np.concatenate([np.concatenate([upper, lower], axis=0) for upper, lower in curves.values()], axis=0)
+    x_min = float(np.min(all_pts[:, 0]))
+    x_max = float(np.max(all_pts[:, 0]))
+    y_min = float(np.min(all_pts[:, 1]))
+    y_max = float(np.max(all_pts[:, 1]))
+    span = max(y_max - y_min, 0.18)
+    y_mid = 0.5 * (y_min + y_max)
+    ax.set_xlim(x_min - pad_x, x_max + pad_x)
+    ax.set_ylim(y_mid - 0.62 * span, y_mid + 0.62 * span)
+    ax.set_aspect("equal", adjustable="box")
+    ax.axis("off")
 
 
 def _style_airfoil_axis(ax, x: np.ndarray, upper: np.ndarray, lower: np.ndarray, pad_x: float = 0.04) -> None:
@@ -75,45 +112,50 @@ def _style_airfoil_axis(ax, x: np.ndarray, upper: np.ndarray, lower: np.ndarray,
     y_max = float(np.max(upper))
     span = max(y_max - y_min, 0.18)
     y_mid = 0.5 * (y_min + y_max)
-    ax.set_xlim(-pad_x, 1.0 + pad_x)
+    ax.set_xlim(float(np.min(x)) - pad_x, float(np.max(x)) + pad_x)
     ax.set_ylim(y_mid - 0.62 * span, y_mid + 0.62 * span)
     ax.set_aspect("equal", adjustable="box")
     ax.axis("off")
 
 
-def draw_airfoil_body(ax, case: AirfoilCase, *, show_flow: bool = False, show_camber: bool = True):
-    x, upper, lower, exact = airfoil_surface(case)
+def draw_high_lift_body(ax, case: HighLiftCase, *, show_flow: bool = False, show_camber: bool = True):
+    curves, exact = high_lift_surface(case)
     if show_flow:
         flow = case.points[case.sdf <= np.quantile(case.sdf, 0.55)]
         ax.scatter(flow[:, 0], flow[:, 1], s=4, c="#94a3b8", alpha=0.16, linewidths=0, zorder=1)
-    ax.fill_between(x, lower, upper, color="#0f766e", alpha=0.92, linewidth=0, zorder=3)
-    ax.plot(x, upper, color="#082f49", lw=1.65, zorder=4)
-    ax.plot(x, lower, color="#082f49", lw=1.65, zorder=4)
-    if show_camber:
-        ax.plot(x, 0.5 * (upper + lower), color="#f59e0b", lw=1.0, alpha=0.95, zorder=5)
-    ax.scatter(
-        [0.0, 1.0],
-        [0.5 * (upper[0] + lower[0]), 0.5 * (upper[-1] + lower[-1])],
-        s=16,
-        c="#082f49",
-        zorder=6,
-    )
-    _style_airfoil_axis(ax, x, upper, lower)
+    colors = {"slat": "#0891b2", "main": "#0f766e", "flap": "#7c3aed", "reconstructed": "#0f766e"}
+    for name, (upper, lower) in curves.items():
+        polygon = np.concatenate([upper, lower[::-1]], axis=0)
+        ax.fill(polygon[:, 0], polygon[:, 1], color=colors.get(name, "#0f766e"), alpha=0.92, linewidth=0, zorder=3)
+        ax.plot(upper[:, 0], upper[:, 1], color="#082f49", lw=1.45, zorder=4)
+        ax.plot(lower[:, 0], lower[:, 1], color="#082f49", lw=1.45, zorder=4)
+        if show_camber and len(upper) == len(lower):
+            camber = 0.5 * (upper + lower)
+            ax.plot(camber[:, 0], camber[:, 1], color="#f59e0b", lw=0.9, alpha=0.9, zorder=5)
+    _style_high_lift_axis(ax, curves)
+    return curves, exact
+
+
+def draw_airfoil_body(ax, case: AirfoilCase, *, show_flow: bool = False, show_camber: bool = True):
+    curves, exact = draw_high_lift_body(ax, case, show_flow=show_flow, show_camber=show_camber)
+    x, upper, lower, _ = airfoil_surface(case)
     return x, upper, lower, exact
 
 
-def airfoil_profile_figure(case: AirfoilCase, title: str | None = None):
-    """Render a clean airfoil silhouette, using exact NACA parameters when available."""
+def high_lift_profile_figure(case: HighLiftCase, title: str | None = None):
+    """Render a clean high-lift section silhouette."""
     fig, ax = plt.subplots(figsize=(6.4, 2.7), dpi=190)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#f8fafc")
-    _, _, _, exact = draw_airfoil_body(ax, case, show_flow=True, show_camber=True)
-    label = "exact NACA profile" if exact else "reconstructed profile"
-    fig.suptitle(title or "Airfoil profile", fontsize=13, fontweight="bold", color="#0f172a", y=0.98)
+    _, exact = draw_high_lift_body(ax, case, show_flow=True, show_camber=True)
+    label = "synthetic CRM-HL section" if exact else "reconstructed section"
+    flap = getattr(case, "flap_deflection", None)
+    flap_label = f" | flap {math.degrees(flap):.0f} deg" if flap is not None else ""
+    fig.suptitle(title or "High-lift section", fontsize=13, fontweight="bold", color="#0f172a", y=0.98)
     fig.text(
         0.5,
         0.875,
-        f"AoA {math.degrees(case.aoa):.1f} deg | Re {case.re:.2e} | {label}",
+        f"AoA {math.degrees(case.aoa):.1f} deg | Re {case.re:.2e}{flap_label} | {label}",
         ha="center",
         va="center",
         fontsize=8.8,
@@ -123,17 +165,28 @@ def airfoil_profile_figure(case: AirfoilCase, title: str | None = None):
     return fig
 
 
-def airfoil_sections_figure(case: AirfoilCase, title: str | None = None):
-    """Render a clean airfoil silhouette plus chordwise section cuts."""
+def airfoil_profile_figure(case: AirfoilCase, title: str | None = None):
+    return high_lift_profile_figure(case, title=title)
+
+
+def high_lift_sections_figure(case: HighLiftCase, title: str | None = None):
+    """Render a high-lift silhouette plus local section cuts."""
     fig, ax = plt.subplots(figsize=(6.4, 2.8), dpi=190)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#f8fafc")
-    x, upper, lower, _ = draw_airfoil_body(ax, case, show_flow=False, show_camber=True)
-    stations = np.array([0.15, 0.30, 0.50, 0.70, 0.85], dtype=np.float32)
+    curves, _ = draw_high_lift_body(ax, case, show_flow=False, show_camber=True)
+    upper = curves.get("main", next(iter(curves.values())))[0]
+    lower = curves.get("main", next(iter(curves.values())))[1]
+    order_u = np.argsort(upper[:, 0])
+    order_l = np.argsort(lower[:, 0])
+    x = np.linspace(float(upper[:, 0].min()), float(upper[:, 0].max()), 220)
+    upper_y = np.interp(x, upper[order_u, 0], upper[order_u, 1])
+    lower_y = np.interp(x, lower[order_l, 0], lower[order_l, 1])
+    stations = np.array([0.16, 0.32, 0.50, 0.68, 0.82], dtype=np.float32)
     colors = ["#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a"]
     for x0, color in zip(stations, colors):
-        y_hi = float(np.interp(x0, x, upper))
-        y_lo = float(np.interp(x0, x, lower))
+        y_hi = float(np.interp(x0, x, upper_y))
+        y_lo = float(np.interp(x0, x, lower_y))
         thickness = y_hi - y_lo
         ax.plot([x0, x0], [y_lo, y_hi], color=color, lw=2.4, solid_capstyle="round", zorder=7)
         ax.text(
@@ -146,14 +199,18 @@ def airfoil_sections_figure(case: AirfoilCase, title: str | None = None):
             color=color,
             fontweight="bold",
         )
-    fig.suptitle(title or "Airfoil sections", fontsize=13, fontweight="bold", color="#0f172a", y=0.98)
-    fig.text(0.5, 0.875, "Chordwise thickness sections", ha="center", va="center", fontsize=8.8, color="#334155")
+    fig.suptitle(title or "High-lift section cuts", fontsize=13, fontweight="bold", color="#0f172a", y=0.98)
+    fig.text(0.5, 0.875, "Main-element thickness sections plus slat/flap context", ha="center", va="center", fontsize=8.8, color="#334155")
     fig.tight_layout(rect=[0, 0, 1, 0.80], pad=0.45)
     return fig
 
 
-def airfoil_gallery_figure(cases: list[AirfoilCase], title: str, max_cases: int = 12):
-    """Compact gallery of clean airfoil silhouettes for workshop browsing."""
+def airfoil_sections_figure(case: AirfoilCase, title: str | None = None):
+    return high_lift_sections_figure(case, title=title)
+
+
+def high_lift_gallery_figure(cases: list[HighLiftCase], title: str, max_cases: int = 12):
+    """Compact gallery of high-lift sections for workshop browsing."""
     shown = list(cases[:max_cases])
     cols = 4
     rows = int(math.ceil(len(shown) / cols))
@@ -164,7 +221,7 @@ def airfoil_gallery_figure(cases: list[AirfoilCase], title: str, max_cases: int 
         ax.set_facecolor("#f8fafc")
         ax.axis("off")
     for i, (ax, case) in enumerate(zip(axes.ravel(), shown)):
-        draw_airfoil_body(ax, case, show_flow=False, show_camber=False)
+        draw_high_lift_body(ax, case, show_flow=False, show_camber=False)
         ax.set_title(
             f"case {i} | AoA {math.degrees(case.aoa):.1f} deg",
             fontsize=8.2,
@@ -175,6 +232,10 @@ def airfoil_gallery_figure(cases: list[AirfoilCase], title: str, max_cases: int 
     fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995, color="#0f172a")
     fig.tight_layout(rect=[0, 0, 1, 0.94], h_pad=0.75, w_pad=0.4)
     return fig
+
+
+def airfoil_gallery_figure(cases: list[AirfoilCase], title: str, max_cases: int = 12):
+    return high_lift_gallery_figure(cases, title=title, max_cases=max_cases)
 
 
 def pressure_figure(case: AirfoilCase, prediction: np.ndarray, title: str | None = None):
