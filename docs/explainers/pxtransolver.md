@@ -23,6 +23,17 @@ likely to differ.
 We start here because every other design decision in the architecture
 follows from the shape of the data.
 
+```mermaid
+flowchart LR
+    G[Geometry per point<br/>position, normal, SDF, curvature] --> X[Point feature tensor<br/>N x C_in]
+    U[Optional known physics<br/>boundary values, coarse fields] --> X
+    X --> E[Input embedding<br/>Linear C_in to C]
+    E --> B[Stack of Physics-Attention blocks]
+    B --> H[Output head]
+    H --> Y[Predicted field per point<br/>N x C_out]
+    Y --> Q[Engineering quantities<br/>drag, lift, pressure profiles]
+```
+
 ### 1.1 What one input point looks like
 
 A Transolver sees the discretised domain (the CFD mesh, or a
@@ -108,6 +119,24 @@ back.
 
 The three steps of the block are: **slice**, **attend**, **de-slice**.
 
+```mermaid
+flowchart TB
+    P[Mesh or point-cloud tokens<br/>N points x C features]
+    W[Learned soft assignment<br/>N points to M physics slices]
+    Z[Slice tokens<br/>M slices x C features]
+    A[Self-attention between slices<br/>M x M interactions]
+    Z2[Updated slice tokens]
+    O[Updated point tokens<br/>N points x C features]
+
+    P --> W
+    P --> Z
+    W --> Z
+    Z --> A
+    A --> Z2
+    W --> O
+    Z2 --> O
+```
+
 **Step A — Slicing.** Each point is softly assigned to each of `M`
 slices via a learned projection followed by softmax:
 
@@ -158,6 +187,22 @@ next block.
 **Complexity.** `O(NMC + M²C)` — linear in `N` because `M` is a small
 constant. This is what makes the architecture tractable on
 million-point meshes where a vanilla attention would OOM.
+
+```mermaid
+flowchart LR
+    subgraph Vanilla["Vanilla transformer"]
+        V1[N mesh points] --> V2[N x N point interactions]
+        V2 --> V3[O(N squared C)]
+    end
+
+    subgraph Transolver["Transolver"]
+        T1[N mesh points] --> T2[M learned physics slices]
+        T2 --> T3[M x M slice interactions]
+        T3 --> T4[O(N M C + M squared C)]
+    end
+
+    V3 -. expensive when N is large .-> T4
+```
 
 ### 2.3 The full block, in one equation each
 
@@ -226,6 +271,18 @@ The paper does not explicitly write the training loss — a common
 omission when the answer is "mean-squared error, obviously" — but
 the metrics are precise, and standard MSE / relative L2 is implied.
 Two categories of loss/metric are worth separating.
+
+```mermaid
+flowchart TB
+    P[Per-point field prediction<br/>pressure and velocity] --> L1[Field loss<br/>MSE or relative L2]
+    P --> I[Surface integration or proxy]
+    I --> L2[Design metrics<br/>drag, lift, rank correlation]
+    G[Geometry and SDF] --> W[Near-surface weights]
+    W --> L1
+    L1 --> S[Model-selection score]
+    L2 --> S
+    S --> R[(W&B Models<br/>promoted checkpoint)]
+```
 
 ### 3.1 Field-wise loss
 
@@ -310,9 +367,11 @@ workloads.
 | ShapeNet Car  | 3D, unstructured | 32 186          | Estimate surface pressure + volume velocity from car geometry |
 | AirfRANS      | 2D, unstructured | 32 000          | Airfoil lift/drag under varying AoA and Reynolds number |
 
-**AirfRANS** is the dataset the workshop repo uses (`data.py` has
-the loader). Bonnet et al. (2022) — high-fidelity RANS on NACA
-airfoils.
+**AirfRANS** is the real dataset that the workshop's synthetic NACA
+airfoil generator is patterned after. Bonnet et al. (2022) provide
+high-fidelity RANS on NACA airfoils; the repo keeps an optional
+`[airfrans]` dependency for teams that want to swap the toy generator
+for real CFD data.
 
 **ShapeNet Car** is a synthetic wind-tunnel dataset over ShapeNet
 car geometries, historically used in graph-network surrogate papers.
@@ -521,6 +580,7 @@ what.
 - **DrivAerNet++.** Elrefaie et al.,
   `github.com/Mohamedelrefaie/DrivAerNet`; data on Harvard Dataverse.
 - **AirfRANS.** Bonnet et al. (2022), NeurIPS Datasets track — the
-  smaller academic sibling used in the workshop repo.
+  smaller academic sibling behind the workshop repo's synthetic
+  airfoil story.
 - **CFD surrogates background.** `docs/explainers/cfd_surrogate_models.md`
   in this repo; broader reading path in `further_reading.md`.

@@ -11,6 +11,25 @@ open version.
 
 ---
 
+```mermaid
+flowchart TB
+    R[Reviews<br/>build the vocabulary] --> F[Foundational model families]
+    F --> NF[Neural fields<br/>coordinate to field]
+    F --> PINN[PINNs<br/>physics residual in the loss]
+    F --> NO[Neural operators<br/>function to function]
+    F --> GNN[Graph and mesh simulators<br/>message passing on geometry]
+    F --> TR[Transformer surrogates<br/>attention over geometry]
+
+    NF --> D[Datasets and benchmarks<br/>AirfRANS, PDEBench, DrivAerNet++]
+    PINN --> D
+    NO --> D
+    GNN --> D
+    TR --> D
+
+    D --> H[Hands-on practice<br/>train baselines and log to W&B]
+    H --> C[Current frontier<br/>workshops, arXiv feeds, PhysicsX blogs]
+```
+
 ## A. Start with reviews — build the map before picking a paper
 
 The reviews are dense but they give you the vocabulary and the sense of
@@ -114,8 +133,10 @@ Reading three papers is useful. Training a small model on one of these
 datasets is transformative. In increasing order of scale:
 
 - **AirfRANS** (Bonnet et al., NeurIPS Datasets 2022). 2D RANS
-  simulations of NACA airfoils. Few gigabytes; runs on a laptop. The
-  dataset the workshop uses.
+  simulations of NACA airfoils. Few gigabytes; runs on a laptop. This
+  is the real-data sibling of the synthetic NACA generator used in the
+  workshop notebooks, and the first dataset to try when you outgrow
+  the laptop demo.
 - **PDEBench** (Takamoto et al., NeurIPS Datasets 2022). Broad
   benchmark across many PDEs (Burgers, Darcy, Navier-Stokes, ...).
   Right for comparing model families on the same tasks. Bigger than

@@ -116,6 +116,20 @@ for each of many candidate designs. If we can train a model that maps
 `geometry → derived quantities` (or `geometry → surface field`)
 directly, we avoid solving the PDE every time.
 
+```mermaid
+flowchart LR
+    D[Candidate geometry] --> CFD[High-fidelity CFD solver]
+    CFD --> F[Pressure and velocity fields]
+    F --> Q[Engineering quantities<br/>drag, lift, loads]
+    D --> TRAIN[Training dataset]
+    F --> TRAIN
+    TRAIN --> SUR[ML surrogate]
+    D --> SUR
+    SUR --> FAST[Fast field and quantity predictions]
+    FAST --> SCREEN[Screen many designs]
+    SCREEN --> CFD
+```
+
 > **Definition (surrogate model).** A learned function
 > `f_θ : geometry → field` (or `geometry → scalar summary`) trained
 > to imitate the output of a full CFD solver. It replaces the
@@ -234,6 +248,17 @@ Three assumptions from Lecture 2 fail for CFD.
 
 A car body is a *shape*, not a fixed-size array. Common
 representations:
+
+```mermaid
+flowchart TB
+    G[Engineering geometry] --> M[Triangle mesh<br/>vertices + faces]
+    G --> P[Point cloud<br/>unordered samples]
+    G --> S[Signed distance field<br/>queryable geometry function]
+
+    M --> A[Graph networks<br/>mesh-aware message passing]
+    P --> B[Point transformers<br/>set-equivariant attention]
+    S --> C[Neural fields<br/>coordinate-conditioned MLPs]
+```
 
 - **Triangle mesh.** A list of vertices and triangles. Different cars
   have different vertex counts.
@@ -442,6 +467,20 @@ is Tancik et al. (2020).
 
 The encoder that produces `e(g)` is almost always a **transformer**.
 This lecture unpacks why, and computes one attention step by hand.
+
+```mermaid
+flowchart LR
+    subgraph Local["Local-only point model"]
+        L1[Point features] --> L2[Independent prediction]
+        L2 --> L3[No global wake or shape context]
+    end
+
+    subgraph Context["Context-aware geometry model"]
+        C1[Point features] --> C2[Attention, graph, or operator block]
+        C2 --> C3[Information flows across geometry]
+        C3 --> C4[Better pressure fields and design proxies]
+    end
+```
 
 ### 5.1 Tokenisation
 
@@ -929,8 +968,9 @@ Not solutions, pointers. Work through in order.
    loss curves to W&B and compare. Reproducing Tancik et al. (2020)
    at toy scale is the fastest way to internalise why positional
    encoding matters.
-3. On AirfRANS: train a point-wise MLP surrogate (the workshop
-   pipeline). Compute `C_L` error alongside RMSE. Verify that they
+3. Start with the workshop's synthetic NACA dataset, then repeat on
+   AirfRANS if you have the optional data installed: train a point-wise
+   MLP surrogate, compute `C_L` error alongside RMSE, verify that they
    move together most of the time — and find a run where they don't.
 4. Read the FNO paper (Li et al. 2021). Sketch the diagram of an FNO
    layer from memory. Compare your sketch to Figure 2 of the paper.
@@ -952,4 +992,5 @@ The short list, if you only have time for four:
 - **Sitzmann et al. (2020)** — SIREN, and the neural-field mechanism
   in its cleanest form.
 - **Li et al. (2021)** — FNO, the entry to the neural-operator line.
-- **Bonnet et al. (2022)** — AirfRANS, the dataset the workshop uses.
+- **Bonnet et al. (2022)** — AirfRANS, the real CFD sibling of the
+  workshop's synthetic NACA airfoil dataset.

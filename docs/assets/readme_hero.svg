@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">PhysicsX W&amp;B Models workshop hero</title>
+  <desc id="desc">A refined overview image for a PhysicsX workshop showing an airfoil surrogate pipeline, W&amp;B Models, media panels, and registry lineage.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="0.58" stop-color="#eef7ff"/>
+      <stop offset="1" stop-color="#ecfdf5"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102033"/>
+      <stop offset="1" stop-color="#123b3a"/>
+    </linearGradient>
+    <linearGradient id="airfoil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="0.52" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="heat" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1d4ed8"/>
+      <stop offset="0.46" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.11"/>
+    </filter>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#0f766e"/>
+    </marker>
+    <style>
+      .font { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+      .eyebrow { fill: #0f766e; font-size: 16px; font-weight: 800; letter-spacing: .06em; }
+      .title { fill: #0f172a; font-size: 54px; font-weight: 850; letter-spacing: 0; }
+      .body { fill: #475569; font-size: 20px; line-height: 1.4; }
+      .small { fill: #64748b; font-size: 14px; }
+      .label { fill: #0f172a; font-size: 16px; font-weight: 800; }
+      .metric { fill: #0f172a; font-size: 24px; font-weight: 850; }
+      .chip { fill: #0f766e; font-size: 13px; font-weight: 800; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="520" rx="34" fill="url(#page)"/>
+  <path d="M-20 430 C180 350 310 438 486 366 C650 298 780 316 940 250 C1088 189 1200 196 1310 122" fill="none" stroke="#bae6fd" stroke-width="34" stroke-linecap="round" opacity=".45"/>
+  <path d="M-16 458 C202 390 302 470 498 405 C680 345 806 365 1018 296 C1150 253 1224 268 1306 230" fill="none" stroke="#99f6e4" stroke-width="24" stroke-linecap="round" opacity=".34"/>
+
+  <g class="font" transform="translate(64 72)">
+    <text class="eyebrow" x="0" y="0">PHYSICSX WORKSHOP</text>
+    <text class="title" x="0" y="64">W&amp;B Models for</text>
+    <text class="title" x="0" y="125">CFD surrogates</text>
+    <text class="body" x="2" y="176">Train a TinyTransolver on synthetic airfoil fields,</text>
+    <text class="body" x="2" y="205">track rich physics media, promote checkpoints,</text>
+    <text class="body" x="2" y="234">and curate Reports plus a live Workspace.</text>
+  </g>
+
+  <g transform="translate(66 350)" class="font">
+    <rect x="0" y="0" width="128" height="38" rx="19" fill="#ecfeff" stroke="#99f6e4"/>
+    <text class="chip" x="24" y="24">Runs</text>
+    <rect x="142" y="0" width="132" height="38" rx="19" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text class="chip" x="166" y="24" fill="#1d4ed8">Models</text>
+    <rect x="288" y="0" width="132" height="38" rx="19" fill="#fffbeb" stroke="#fde68a"/>
+    <text class="chip" x="312" y="24" fill="#b45309">Tables</text>
+    <rect x="434" y="0" width="138" height="38" rx="19" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text class="chip" x="458" y="24" fill="#6d28d9">Workspace</text>
+  </g>
+
+  <g transform="translate(680 54)" filter="url(#softShadow)">
+    <rect width="580" height="392" rx="26" fill="#ffffff"/>
+    <rect x="0" y="0" width="580" height="54" rx="26" fill="url(#ink)"/>
+    <path d="M0 30 Q0 0 30 0 H550 Q580 0 580 30 V54 H0 Z" fill="url(#ink)"/>
+    <circle cx="34" cy="27" r="6" fill="#ef4444"/>
+    <circle cx="56" cy="27" r="6" fill="#f59e0b"/>
+    <circle cx="78" cy="27" r="6" fill="#22c55e"/>
+    <text class="font" x="112" y="33" fill="#e0f2fe" font-size="14" font-weight="800">wandb_emea / jb_physics_demo</text>
+
+    <g class="font" transform="translate(24 78)">
+      <rect width="250" height="136" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text class="label" x="18" y="30">Airfoil field media</text>
+      <rect x="18" y="48" width="214" height="68" rx="13" fill="#e0f2fe"/>
+      <path d="M32 84 C70 54 136 58 186 77 C202 83 218 85 230 77 C202 100 160 107 100 99 C70 95 48 88 32 84 Z" fill="url(#airfoil)"/>
+      <path d="M32 84 C70 54 136 58 186 77 C202 83 218 85 230 77 M32 84 C88 101 158 107 230 77" fill="none" stroke="#082f49" stroke-width="2"/>
+    </g>
+
+    <g class="font" transform="translate(304 78)">
+      <rect width="226" height="136" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text class="label" x="18" y="30">Model score</text>
+      <text class="metric" x="18" y="70">0.363</text>
+      <text class="small" x="18" y="96">selection score</text>
+      <path d="M120 101 C144 78 158 88 176 66 C192 48 207 56 218 37" fill="none" stroke="#14b8a6" stroke-width="4" stroke-linecap="round"/>
+      <path d="M120 112 C144 108 160 116 178 104 C195 92 208 96 220 84" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+    </g>
+
+    <g class="font" transform="translate(24 242)">
+      <rect width="250" height="112" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text class="label" x="18" y="30">Slice routing</text>
+      <rect x="18" y="52" width="32" height="42" rx="7" fill="#2563eb"/>
+      <rect x="62" y="40" width="32" height="54" rx="7" fill="#14b8a6"/>
+      <rect x="106" y="62" width="32" height="32" rx="7" fill="#f59e0b"/>
+      <rect x="150" y="28" width="32" height="66" rx="7" fill="#7c3aed"/>
+      <rect x="194" y="48" width="32" height="46" rx="7" fill="#ef4444"/>
+    </g>
+
+    <g class="font" transform="translate(304 242)">
+      <rect width="226" height="112" rx="18" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text class="label" x="18" y="30">Registry lineage</text>
+      <circle cx="36" cy="70" r="12" fill="#dcfce7" stroke="#16a34a"/>
+      <circle cx="100" cy="70" r="12" fill="#dbeafe" stroke="#2563eb"/>
+      <circle cx="164" cy="70" r="12" fill="#fef3c7" stroke="#f59e0b"/>
+      <path d="M50 70 H84 M114 70 H148" stroke="#0f766e" stroke-width="3" marker-end="url(#arrow)"/>
+      <text class="small" x="20" y="101">dataset -> run -> model</text>
+    </g>
+  </g>
+</svg>

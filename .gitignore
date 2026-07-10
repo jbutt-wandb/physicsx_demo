@@ -13,10 +13,12 @@ wheels/
 
 # W&B local artifacts
 wandb/
+wandb_downloads/
 data/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+*.executed.ipynb
 
 context/
 notebooks/archive
@@ -24,6 +26,12 @@ notebooks/artifacts
 notebooks/wandb_emea
 
 src/*
+!src/physicsx_demo/
+!src/physicsx_demo/**/
+!src/physicsx_demo/*.py
+!src/physicsx_demo/**/*.py
+src/physicsx_demo/**/__pycache__/
+src/physicsx_demo/**/*.py[oc]
 
 main.py
 uv.lock
