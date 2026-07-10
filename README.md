@@ -1,14 +1,14 @@
 # PhysicsX W&B Workshop
 
 Hands-on demo notebooks for a 2.5-hour Weights & Biases workshop
-tailored to PhysicsX's neural-field CFD surrogate workflow. Everything
+tailored to PhysicsX's real-data CFD surrogate workflow. Everything
 attendees need lives in `notebooks/` and `src/physicsx_demo/utils/`:
 the notebooks are thin orchestration layers, the shared code is
 importable, and the full flow runs on a laptop CPU against a small
 `TinyTransolverKpi` model trained on the public HiLiftAeroML KPI CSVs.
-The synthetic CRM-HL field utilities remain available as compact visual
-companions when you want pressure/velocity media without downloading
-large VTU files.
+The workshop use case is integrated coefficient prediction for NASA
+CRM-HL high-lift variants: eight flap/slat design variables plus angle
+of attack in, `cl`, `cd`, and `cm` out.
 
 **Target W&B project:** `wandb_emea/jb_physics_demo`
 **Registry entry point:** `wandb-registry-high_lift_surrogates`
@@ -99,26 +99,13 @@ flowchart TB
   physical RMSE for each coefficient, drag polar media, prediction
   tables, a pooled-token MLP baseline, and a best-checkpoint Registry
   promotion.
-- **Field model.** The repo still includes a downscaled point-field
-  `TinyTransolver` for synthetic pressure/velocity demos. It consumes
-  `(x, y, sdf, aoa, log_re)` per point and predicts `(pressure, u, v)`.
+- **Legacy point-field helpers.** The repo still includes a downscaled
+  `TinyTransolver` and synthetic CRM-HL-style point-field generator for
+  local experiments that need pressure/velocity media without
+  downloading large VTU files. These helpers are not the main workshop
+  path; `TinyTransolverKpi` and the HiLiftAeroML CSV summaries are.
   Full description of the Physics-Attention mechanism is in
   `docs/explainers/pxtransolver.md`.
-- **Synthetic field dataset.** Synthetic CRM-HL-style high-lift sections, inspired by
-  the HiLiftAeroML / NASA CRM-HL Transolver++ use case, with analytic
-  pressure and velocity fields (clipped near singularities), plus a
-  hidden global wake/circulation component derived from the high-lift
-  configuration.
-  That hidden component makes the task less trivially pointwise: a
-  model with cross-point context can infer it from the full point cloud,
-  while a per-point MLP only sees local `(x, y, sdf, aoa, log_re)`.
-  80 cases × 512 points, split 80/20 into train/val. Serialised as JSON
-  so the payload is self-describing. Each case also carries the hidden
-  CRM-HL-style section parameters used for visualization, so W&B media can
-  render clean high-lift section silhouettes rather than noisy sample-point
-  clouds. The dataset artifact also includes `high_lift_shape_sections`,
-  an artifact-backed `wandb.Table` with high-lift section images and
-  chordwise section images for physical inspection.
 
 ## Docs and explainers
 
@@ -138,17 +125,21 @@ The notebooks are intentionally thin orchestration layers. Reusable
 workshop code lives under `src/physicsx_demo/utils/`:
 
 - `data.py` — `HighLiftCase`, synthetic CRM-HL dataset generation,
-  JSON payload helpers, train/val splitting, tensor stacking.
+  JSON payload helpers, train/val splitting, tensor stacking for the
+  optional point-field companion path.
 - `hilift_kpi.py` — real HiLiftAeroML KPI CSV loading, geometry-held-out
   splits, normalization, and geometry-token datasets for `cl/cd/cm`.
-- `model.py` — `PhysicsAttention`, `TinyTransolver`, pointwise MLP
-  baseline, `TinyTransolverKpi`, KPI token baseline, parameter counting.
-- `metrics.py` — relative L2, slice regularisation diagnostics,
-  pressure-force proxies, composite selection score.
+- `model.py` — `PhysicsAttention`, `TinyTransolverKpi`, KPI token
+  baseline, plus legacy point-field models.
+- `kpi_training.py` — the real HiLift KPI experiment-tracking training
+  routine with W&B Tables, profile media, comparison plots, videos,
+  artifacts, Workspace creation, and Registry promotion.
+- `metrics.py` — relative L2, slice regularisation diagnostics, and
+  legacy point-field pressure-force proxies.
 - `viz.py` — high-lift sections, comparison/error plots, scorecards,
   slice assignment frames, W&B-ready image/video helpers.
-- `training.py` — the full experiment-tracking training routine with
-  rich W&B media, Tables, artifacts, and Registry promotion.
+- `training.py` — legacy point-field training routine retained for
+  compact pressure/velocity experiments.
 
 ## Dependencies
 
@@ -163,8 +154,6 @@ The notebooks are CPU-friendly by default. Optional extras:
 
 - `[realdata]` — installs Hugging Face download support for a real
   HiLiftAeroML subset from `nvidia/HiLiftAeroML`.
-- `[airfrans]` — the real AirfRANS dataset (Bonnet et al. 2022) if
-  you want to swap the synthetic generator.
 - `[notebooks]` — installs `jupyter` if you'd rather not rely on your
   existing Jupyter install.
 
@@ -196,9 +185,7 @@ That script follows the Transolver++ tutorial pattern: merge
 `force_mom_all.csv` with `geo_values_all.csv`, hold out entire
 geometries, encode the eight high-lift design variables as semantic
 tokens, and predict `cl`, `cd`, and `cm`. Use it as the real-data
-backbone for the workshop; use the synthetic point-field path when you
-need compact pressure/velocity visualizations without downloading
-13 GB boundary archives.
+backbone for the workshop.
 
 ## Presenter preflight
 
@@ -229,7 +216,7 @@ fresh against the current Registry state.
 flowchart LR
     D[(datasets:production)] --> T[tiny-transolver-kpi-train run]
     T --> C[(checkpoints:production)]
-    T --> M[W&B Tables + Images<br/>coefficient predictions, drag polars]
+    T --> M[W&B Tables + Media<br/>profiles, comparisons, videos]
     C --> S[sweep trials]
     S --> A[checkpoint candidates<br/>high_lift_kpi_surrogate_ckpt_tuned]
     A --> P[sweep-winner-promotion run]

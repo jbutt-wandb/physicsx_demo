@@ -367,10 +367,12 @@ workloads.
 | ShapeNet Car  | 3D, unstructured | 32 186          | Estimate surface pressure + volume velocity from car geometry |
 | AirfRANS      | 2D, unstructured | 32 000          | Airfoil lift/drag under varying AoA and Reynolds number |
 
-The workshop now uses a laptop-sized, HiLiftAeroML-inspired CRM-HL
-high-lift section generator. AirfRANS remains a useful 2D real-CFD
-stepping stone if teams want a smaller public dataset before moving
-to large high-lift aircraft data.
+The workshop now uses real HiLiftAeroML KPI CSV summaries from the
+NASA CRM-HL high-lift family. It is the coefficient-level version of
+the Transolver story: geometry tokens and angle of attack in, `cl`,
+`cd`, and `cm` out. The synthetic CRM-HL point-field generator in the
+repo is retained only as a compact companion for local pressure/velocity
+visual experiments.
 
 **ShapeNet Car** is a synthetic wind-tunnel dataset over ShapeNet
 car geometries, historically used in graph-network surrogate papers.
@@ -578,8 +580,10 @@ what.
   `huggingface.co/datasets/luminary-shift/SUV`.
 - **DrivAerNet++.** Elrefaie et al.,
   `github.com/Mohamedelrefaie/DrivAerNet`; data on Harvard Dataverse.
-- **AirfRANS.** Bonnet et al. (2022), NeurIPS Datasets track — the
-  smaller academic sibling behind the workshop repo's synthetic
-  airfoil story.
+- **HiLiftAeroML.** NVIDIA / NASA CRM-HL high-lift aircraft data — the
+  real-data KPI use case used by this workshop.
+- **AirfRANS.** Bonnet et al. (2022), NeurIPS Datasets track — a
+  smaller 2D real-CFD stepping stone if you want an additional field
+  dataset after the HiLift KPI workflow.
 - **CFD surrogates background.** `docs/explainers/cfd_surrogate_models.md`
   in this repo; broader reading path in `further_reading.md`.

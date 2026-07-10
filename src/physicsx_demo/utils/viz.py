@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from physicsx_demo.utils.data import AirfoilCase, HighLiftCase, high_lift_surfaces
+from physicsx_demo.utils.data import HighLiftCase, high_lift_surfaces
 
 
 def case_shape_params(case: HighLiftCase) -> tuple[float, float, float, float, float] | None:
@@ -58,7 +58,7 @@ def fallback_high_lift_surface(case: HighLiftCase, n: int = 260) -> dict[str, tu
     return {"reconstructed": (np.stack([x_grid, upper], axis=1), np.stack([x_grid, lower], axis=1))}
 
 
-def fallback_airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def fallback_airfoil_surface(case: HighLiftCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     curves = fallback_high_lift_surface(case, n=n)
     upper, lower = curves["reconstructed"]
     return upper[:, 0], upper[:, 1], lower[:, 1]
@@ -81,7 +81,7 @@ def high_lift_surface(case: HighLiftCase, n: int = 260) -> tuple[dict[str, tuple
     )
 
 
-def airfoil_surface(case: AirfoilCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+def airfoil_surface(case: HighLiftCase, n: int = 260) -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
     curves, exact = high_lift_surface(case, n=n)
     upper = np.concatenate([pair[0] for pair in curves.values()], axis=0)
     lower = np.concatenate([pair[1] for pair in curves.values()], axis=0)
@@ -136,7 +136,8 @@ def draw_high_lift_body(ax, case: HighLiftCase, *, show_flow: bool = False, show
     return curves, exact
 
 
-def draw_airfoil_body(ax, case: AirfoilCase, *, show_flow: bool = False, show_camber: bool = True):
+def draw_airfoil_body(ax, case: HighLiftCase, *, show_flow: bool = False, show_camber: bool = True):
+    """Compatibility wrapper around the high-lift body renderer."""
     curves, exact = draw_high_lift_body(ax, case, show_flow=show_flow, show_camber=show_camber)
     x, upper, lower, _ = airfoil_surface(case)
     return x, upper, lower, exact
@@ -165,7 +166,8 @@ def high_lift_profile_figure(case: HighLiftCase, title: str | None = None):
     return fig
 
 
-def airfoil_profile_figure(case: AirfoilCase, title: str | None = None):
+def airfoil_profile_figure(case: HighLiftCase, title: str | None = None):
+    """Compatibility wrapper around `high_lift_profile_figure`."""
     return high_lift_profile_figure(case, title=title)
 
 
@@ -205,7 +207,8 @@ def high_lift_sections_figure(case: HighLiftCase, title: str | None = None):
     return fig
 
 
-def airfoil_sections_figure(case: AirfoilCase, title: str | None = None):
+def airfoil_sections_figure(case: HighLiftCase, title: str | None = None):
+    """Compatibility wrapper around `high_lift_sections_figure`."""
     return high_lift_sections_figure(case, title=title)
 
 
@@ -234,12 +237,13 @@ def high_lift_gallery_figure(cases: list[HighLiftCase], title: str, max_cases: i
     return fig
 
 
-def airfoil_gallery_figure(cases: list[AirfoilCase], title: str, max_cases: int = 12):
+def airfoil_gallery_figure(cases: list[HighLiftCase], title: str, max_cases: int = 12):
+    """Compatibility wrapper around `high_lift_gallery_figure`."""
     return high_lift_gallery_figure(cases, title=title, max_cases=max_cases)
 
 
-def pressure_figure(case: AirfoilCase, prediction: np.ndarray, title: str | None = None):
-    """Side-by-side scatter of truth vs predicted pressure for one AirfoilCase."""
+def pressure_figure(case: HighLiftCase, prediction: np.ndarray, title: str | None = None):
+    """Side-by-side scatter of truth vs predicted pressure for one high-lift case."""
     fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.4), dpi=120)
     fig.patch.set_facecolor("white")
     for ax in axes:
@@ -273,7 +277,7 @@ def pressure_figure(case: AirfoilCase, prediction: np.ndarray, title: str | None
     return fig
 
 
-def slice_figure(case: AirfoilCase, slice_argmax: np.ndarray, epoch: int):
+def slice_figure(case: HighLiftCase, slice_argmax: np.ndarray, epoch: int):
     fig, ax = plt.subplots(figsize=(3.8, 3.2), dpi=120)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#f7f9fc")
@@ -296,7 +300,7 @@ def slice_figure(case: AirfoilCase, slice_argmax: np.ndarray, epoch: int):
     return fig
 
 
-def slice_video_frame(case: AirfoilCase, slice_argmax: np.ndarray, epoch: int, n_slices: int) -> np.ndarray:
+def slice_video_frame(case: HighLiftCase, slice_argmax: np.ndarray, epoch: int, n_slices: int) -> np.ndarray:
     """Render one RGB frame for the slice-evolution video."""
     fig, ax = plt.subplots(figsize=(5.2, 4.0), dpi=120)
     fig.patch.set_facecolor("white")
@@ -372,7 +376,7 @@ def save_frame_png(frame: np.ndarray, output_dir: Path, name: str) -> Path:
     return path
 
 
-def comparison_figure(case: AirfoilCase, model_prediction: np.ndarray, baseline_prediction: np.ndarray, epoch: int, case_id: int):
+def comparison_figure(case: HighLiftCase, model_prediction: np.ndarray, baseline_prediction: np.ndarray, epoch: int, case_id: int):
     """Truth vs TinyTransolver vs baseline pressure, with one shared colorbar."""
     fields = [case.pressure, model_prediction[:, 0], baseline_prediction[:, 0]]
     labels = ["ground truth", "TinyTransolver", "pointwise baseline"]
@@ -409,7 +413,7 @@ def comparison_figure(case: AirfoilCase, model_prediction: np.ndarray, baseline_
     return fig
 
 
-def error_figure(case: AirfoilCase, model_prediction: np.ndarray, baseline_prediction: np.ndarray, epoch: int, case_id: int):
+def error_figure(case: HighLiftCase, model_prediction: np.ndarray, baseline_prediction: np.ndarray, epoch: int, case_id: int):
     """Absolute pressure error comparison for TinyTransolver and baseline."""
     model_err = np.abs(model_prediction[:, 0] - case.pressure)
     base_err = np.abs(baseline_prediction[:, 0] - case.pressure)

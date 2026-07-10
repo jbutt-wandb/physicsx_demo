@@ -11,7 +11,7 @@
       <stop offset="0" stop-color="#102033"/>
       <stop offset="1" stop-color="#123b3a"/>
     </linearGradient>
-    <linearGradient id="airfoil" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="profile" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#0ea5e9"/>
       <stop offset="0.52" stop-color="#14b8a6"/>
       <stop offset="1" stop-color="#f59e0b"/>

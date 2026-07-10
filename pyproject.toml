@@ -18,7 +18,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-airfrans = ["airfrans>=0.1"]
 realdata = [
     "huggingface-hub>=0.25",
     "hf-xet>=1.1",

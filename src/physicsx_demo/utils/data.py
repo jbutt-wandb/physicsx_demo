@@ -41,6 +41,8 @@ class HighLiftCase:
 
 
 # Backwards-compatible name for existing notebooks and artifacts.
+# Backward-compatible alias for notebooks/scripts created before the
+# workshop moved from 2D airfoil language to CRM-HL high-lift sections.
 AirfoilCase = HighLiftCase
 
 

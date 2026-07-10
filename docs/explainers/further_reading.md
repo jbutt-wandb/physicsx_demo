@@ -20,7 +20,7 @@ flowchart TB
     F --> GNN[Graph and mesh simulators<br/>message passing on geometry]
     F --> TR[Transformer surrogates<br/>attention over geometry]
 
-    NF --> D[Datasets and benchmarks<br/>AirfRANS, PDEBench, DrivAerNet++]
+    NF --> D[Datasets and benchmarks<br/>HiLiftAeroML, PDEBench, DrivAerNet++]
     PINN --> D
     NO --> D
     GNN --> D
@@ -132,10 +132,14 @@ starred one is the highest-leverage read in its group.
 Reading three papers is useful. Training a small model on one of these
 datasets is transformative. In increasing order of scale:
 
+- **HiLiftAeroML** (NVIDIA / NASA CRM-HL). High-fidelity high-lift
+  aircraft CFD summaries and large surface/volume field archives. The
+  workshop uses the lightweight KPI CSV path: geometry design variables
+  plus angle of attack in, `cl`, `cd`, and `cm` out.
 - **AirfRANS** (Bonnet et al., NeurIPS Datasets 2022). 2D RANS
   simulations of NACA airfoils. Few gigabytes; runs on a laptop. This
-  is a good smaller real-CFD stepping stone before attempting a full
-  high-lift aircraft dataset such as HiLiftAeroML.
+  remains a useful smaller real-CFD stepping stone, but it is not the
+  workshop dataset.
 - **PDEBench** (Takamoto et al., NeurIPS Datasets 2022). Broad
   benchmark across many PDEs (Burgers, Darcy, Navier-Stokes, ...).
   Right for comparing model families on the same tasks. Bigger than
@@ -233,9 +237,11 @@ et al. 2021) and Transolver (Wu et al. 2024). Goal: see the two
 architectural threads — graph networks and transformers — and how they
 handle irregular geometry.
 
-**Week 5 — Hands-on.** Pick AirfRANS or one PDEBench task. Train a
-small baseline (an MLP, then an FNO). Log everything to W&B so you can
-compare. Goal: internalise the training loop and evaluation shape.
+**Week 5 — Hands-on.** Start with the workshop's HiLiftAeroML KPI
+slice. Train a token MLP baseline, then `TinyTransolverKpi`, and log
+tables/media to W&B. If you want a field-level follow-up, pick AirfRANS
+or one PDEBench task next. Goal: internalise the training loop,
+evaluation shape, and artifact lineage.
 
 **Week 6 — Frontier and application.** Read Alkin et al. (2024) on
 Universal Physics Transformers, one recent workshop paper of your
