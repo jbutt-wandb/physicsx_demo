@@ -22,9 +22,15 @@ context/
 notebooks/archive
 notebooks/artifacts
 notebooks/wandb_emea
-notebooks/advanced/*
+notebooks/advanced/**
+notebooks/hiliftaeroml/**
 
-src/*
+src/**
 
 main.py
 uv.lock
+
+docs/explainers/cfd_surrogate_models.md
+docs/explainers/further_reading.md
+docs/explainers/pxtransolver.md
+docs/explainers/surrogate_ml_hodges.pdf
