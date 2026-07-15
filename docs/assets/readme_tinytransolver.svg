@@ -44,8 +44,9 @@
       <text class="font p" x="24" y="66">8 design tokens + AoA</text>
       <text class="font code" x="24" y="95">(feature, station, value)</text>
       <rect x="24" y="122" width="166" height="108" rx="18" fill="#e0f2fe"/>
-      <path d="M42 176 C76 142 132 146 174 166 C186 172 194 176 204 169 C184 193 146 200 92 192 C66 188 50 180 42 176 Z" fill="url(#field)"/>
-      <path d="M42 176 C76 142 132 146 174 166 C186 172 194 176 204 169 M42 176 C92 194 150 199 204 169" fill="none" stroke="#082f49" stroke-width="2"/>
+      <path d="M42 152 C58 138 78 138 96 143 C78 148 58 150 42 152 Z" fill="#0ea5e9" stroke="#082f49" stroke-width="2"/>
+      <path d="M70 178 C100 150 150 152 190 174 C158 184 106 188 70 178 Z" fill="url(#field)" stroke="#082f49" stroke-width="2"/>
+      <path d="M150 188 C166 190 184 205 198 224 C178 216 160 202 150 188 Z" fill="#7c3aed" stroke="#082f49" stroke-width="2"/>
       <g fill="#0f766e" opacity=".45">
         <circle cx="56" cy="136" r="3"/><circle cx="78" cy="222" r="3"/><circle cx="118" cy="132" r="3"/><circle cx="158" cy="224" r="3"/><circle cx="184" cy="140" r="3"/>
       </g>

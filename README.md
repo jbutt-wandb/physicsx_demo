@@ -10,6 +10,14 @@ The workshop use case is integrated coefficient prediction for NASA
 CRM-HL high-lift variants: eight flap/slat design variables plus angle
 of attack in, `cl`, `cd`, and `cm` out.
 
+The modeling path is adapted from the lightweight HiLiftAeroML
+Transolver++ Colab tutorials: the 0D KPI notebook's CSV merge,
+geometry-held-out split, semantic high-lift design tokens, AoA
+conditioning, and pooled coefficient prediction are the backbone. The
+point-cloud tutorial motivates the optional pressure/velocity media
+path, but this workshop keeps the large VTU workflow out of the main
+demo.
+
 **Target W&B project:** `wandb_emea/jb_physics_demo`
 **Registry entry point:** `wandb-registry-high_lift_surrogates`
 
@@ -89,16 +97,18 @@ flowchart TB
     E --> R[(W&B Models<br/>production checkpoint)]
 ```
 
-- **Real KPI model.** `TinyTransolverKpi` uses the same Physics-Attention
-  blocks on eight HiLiftAeroML design-variable tokens: inboard/outboard
-  flap deflection, flap gap, slat deflection, and slat gap. Angle of
-  attack is broadcast as a condition, and the pooled output predicts
-  `cl`, `cd`, and `cm`. Splits are grouped by `GeoID`, so validation and
-  test rows come from held-out aircraft variants rather than shuffled
-  angles from already-seen geometries. The training notebook logs
-  physical RMSE for each coefficient, drag polar media, prediction
-  tables, a pooled-token MLP baseline, and a best-checkpoint Registry
-  promotion.
+- **Real KPI model.** `TinyTransolverKpi` uses a compact in-repo
+  Physics-Attention-style slice/attend/deslice block on eight
+  HiLiftAeroML design-variable tokens: inboard/outboard flap
+  deflection, flap gap, slat deflection, and slat gap. This follows the
+  0D Transolver++ tutorial pattern, while avoiding a live clone/patch of
+  the upstream Colab model during the workshop. Angle of attack is
+  broadcast as a condition, and the pooled output predicts `cl`, `cd`,
+  and `cm`. Splits are grouped by `GeoID`, so validation and test rows
+  come from held-out aircraft variants rather than shuffled angles from
+  already-seen geometries. The training notebook logs physical RMSE for
+  each coefficient, drag polar media, prediction tables, a pooled-token
+  MLP baseline, and a best-checkpoint Registry promotion.
 - **Legacy point-field helpers.** The repo still includes a downscaled
   `TinyTransolver` and synthetic CRM-HL-style point-field generator for
   local experiments that need pressure/velocity media without
@@ -181,7 +191,7 @@ Once the root CSVs are local, run the real KPI training preflight:
 uv run python scripts/train_hilift_kpi.py --data-dir data/hiliftaeroml_subset --n-geometries 80 --epochs 80
 ```
 
-That script follows the Transolver++ tutorial pattern: merge
+That script follows the 0D KPI Transolver++ tutorial pattern: merge
 `force_mom_all.csv` with `geo_values_all.csv`, hold out entire
 geometries, encode the eight high-lift design variables as semantic
 tokens, and predict `cl`, `cd`, and `cm`. Use it as the real-data
