@@ -1,17 +1,14 @@
-# The HiLift point-cloud surrogate — a workshop example
+# The HiLift point-cloud surrogate
 
-This is the motivating example for the second half of the workshop
-(`registry.ipynb` and `experiment_tracking_hilift.ipynb`, then the
-sweeps / reports / async-eval / multistage notebooks). Before you
+ Before you
 open the notebooks, read this to understand *what* problem the
 example solves, *why* the dataset choice matters, and *how* the
 W&B story maps onto a real computational fluid dynamics (CFD)
 surrogate workflow.
 
 Foundational context for this document is Justin Hodges' May 2026
-tutorial *A Beginner's Tutorial: the new HiLiftAeroML dataset with
-code to train a ML surrogate*
-(`docs/explainers/surrogate_ml_hodges.pdf`). This document
+tutorial [A Beginner's Tutorial: the new HiLiftAeroML dataset with
+code to train a ML surrogate](https://hodgesj.substack.com/p/a-beginners-tutorial-the-new-hiliftaeroml). This document
 paraphrases and extends that framing for the workshop.
 
 ---
@@ -24,11 +21,9 @@ pressure field over the wing**. In CFD language: a **surrogate for a
 scalar boundary field** conditioned on geometry and flight condition.
 
 A real CFD run for one such configuration takes hours of compute
-on many CPU cores and produces gigabytes of output. If a model can
+on many CPU cores and produces gigabytes of output. The model must
 learn the map from `(geometry, angle_of_attack) → pressure field`
-from a corpus of past CFD runs, downstream engineers get flow
-predictions in **milliseconds instead of hours** — the value
-proposition that puts CFD surrogates on aerospace roadmaps.
+from a corpus of past CFD runs,.
 
 The workshop uses this problem shape because it matches PhysicsX's
 production workflow: same neural-field-on-point-cloud primitive,
@@ -43,6 +38,8 @@ The workshop is a **seven-notebook end-to-end tour of Weights &
 Biases patterns**, all built on the HiLift point-cloud surrogate
 example. Every notebook is a self-contained tutorial that adds one
 capability to the story you already have.
+
+**The goal of this workshop is not accurate CFD modelling but how Weights & Biases can be used to train and deploy models.**
 
 ### The notebooks, in run order
 
@@ -93,8 +90,7 @@ By the end of the workshop, attendees can:
 - **Curate stakeholder dashboards** — build Reports
   programmatically that stay in sync with live training runs.
 - **Decouple long training from evaluation** — fire eval jobs
-  independently and aggregate results back without unsafe
-  `resume=`.
+  independently and aggregate results.
 - **Coordinate multiple teams via Registry alone** — pass models
   between stages / teams with no shared filesystem, messaging
   channel, or hand-off script.
@@ -113,7 +109,7 @@ A CFD surrogate program stresses every one of these capabilities:
 - **Long training.** Real HiLift training runs go for hours to
   days, so evaluation *must* be decoupled from the training
   process — same async pattern the async-evals notebook
-  demonstrates (§2 notebook 5).
+  demonstrates.
 - **Hyperparameter sensitivity.** Transolver++ is genuinely
   sensitive to learning rate, dropout, and slice count — sweeps
   are a standard part of the pipeline, not a one-off.
@@ -151,52 +147,18 @@ kind of downstream use:
 | STL / STP geometry files | ~MB | Raw CAD geometry |
 | Wall-shear renderings | ~MB | Pre-computed visualisation PNGs |
 
-### Why it matters
-
-Before HiLiftAeroML, the CRM-HL ecosystem existed mainly as a **CFD
-methods validation platform** — the AIAA High-Lift Prediction
-Workshop series used it to compare solvers, turbulence closures,
-and grid strategies. It was open, standardised, and widely
-respected, but not packaged in a form that's easy to *machine-learn
-against*.
-
-HiLiftAeroML changes that. For the first time, ML researchers have
-open, high-fidelity CFD data on a workshop-standard geometry, at a
-scale where "train a neural surrogate on real aerospace data" is
-actually approachable. That's why the Hodges blog exists, and why
-this workshop uses the same problem shape as its running example.
 
 ### The two example paths in the Hodges blog
 
-Hodges walks through **two** tutorials on the dataset:
-
-1. **A 0D KPI (key performance indicator) surrogate.** Inputs:
-   geometry design variables plus angle of attack. Outputs:
-   `(CL, CD, CM)` — lift, drag, and moment coefficients. Trained
-   from the small `force_mom_all.csv` + `geo_values_all.csv`
-   alone. Cheap, fast, good starter example. Not a *field*
-   surrogate.
-2. **A 3D point-cloud surrogate.** Inputs: sampled surface points
+We will follow the pattern of the following tutorial:
+1. **A 3D point-cloud surrogate.** Inputs: sampled surface points
    + normals + AoA condition. Outputs: a scalar field per point
    (typically Cp or wall-shear-magnitude). Trained on samples
-   drawn from the real `boundary_*.vtu.tgz` files. **This is the
-   path this workshop follows.**
-
-Path 2 is the more valuable one — it produces a spatial
-distribution over an aircraft surface, not one aggregate number
-— but it's also the one that runs into the 13 GB-per-case file
-size wall.
+   drawn from the real `boundary_*.vtu.tgz` files.
 
 ---
 
 ## 4. Why we run against synthetic data in the workshop
-
-The Hodges blog notebook exposes a `RUN_MODE` flag with two
-values: `"real_hilift"` and `"demo_pointcloud"`. Real mode downloads
-one or more boundary VTUs from Hugging Face; demo mode generates
-small synthetic point clouds locally.
-
-**We use demo mode only.** The trade-off:
 
 - **13 GB per case** on disk (compressed) — real mode blows a
   workshop laptop's storage and eats hours in downloads.
@@ -426,56 +388,7 @@ an aerospace engineer expects.
 
 ---
 
-## 9. What the two HiLift-facing notebooks show
-
-§2 covers the full seven-notebook tour. The two below are called
-out here because they're where the HiLift example lives directly —
-the surrounding sweep / reports / async-eval / multistage notebooks
-consume their outputs.
-
-### `registry.ipynb` — the platform team
-
-Attendees run this **once**. What it does:
-
-1. Generates 12 demo-synthetic point-cloud cases (3 geometries × 4
-   AoAs) — see §5-6 for what a "case" is.
-2. Publishes them together as a versioned `wandb.Artifact` to the
-   `hilift` Registry, Collection `pointcloud_demo`, aliased
-   `production` + `v1`.
-3. Verifies the round-trip by re-downloading the artifact from
-   Registry in a separate run.
-
-Product: two W&B runs
-(`hilift-pointcloud-demo-register`, `hilift-dataset-verify`) and
-one new Registry entry at
-`wandb-registry-hilift/pointcloud_demo:production`.
-
-### `experiment_tracking_hilift.ipynb` — the training team
-
-Attendees open this **after** `registry.ipynb`. What it does:
-
-1. Clones + patches `thuml/Transolver_plus`.
-2. Pulls the dataset from Registry (creates the lineage edge that
-   attendees will see in the W&B artefact graph).
-3. Splits 12 cases into 8 train / 1 val / 3 test.
-4. Wraps Transolver++ as a point-field surrogate, instantiates
-   DataLoaders, one shape-sanity forward pass.
-5. Trains for 50 epochs. Logs per-epoch `train/loss` +
-   `val_metrics/*` + `learning_rate`. Every 10 epochs saves a
-   checkpoint artifact aliased `epoch-N`, logs a 3D + 2D triptych
-   under `val_plots/*`, and appends rows to a persistent
-   `val_tables/regression_metrics` Table.
-6. Promotes the best-val checkpoint into
-   `wandb-registry-hilift/checkpoints:production`.
-7. Reloads that promoted checkpoint outside the training run and
-   prints inline predictions for every test case.
-
-Product: one W&B run (`hilift-transolverpp-train`), one Registry
-entry at `wandb-registry-hilift/checkpoints:production`.
-
----
-
-## 10. What "success" looks like
+## 9. What "success" looks like
 
 The point is the tooling, not the model, but attendees should still
 be able to read the metrics. Here's what you should expect:
@@ -506,9 +419,9 @@ surrogate quality.
 
 ---
 
-## 11. From demo to real HiLift — the one-line swap
+## 10. From demo to real HiLift — the one-line swap
 
-The workshop stops at demo mode intentionally. To scale to real
+The workshop stops at synthetic data intentionally. To scale to real
 data, an ML engineer would:
 
 1. **Replace `create_demo_pointcloud_case`** in `registry.ipynb`
@@ -526,26 +439,12 @@ data, an ML engineer would:
    minutes on CPU.
 
 Everything downstream — the training loop, the W&B logging, the
-Registry, the sweep integration, the reports — remains
-byte-identical. That property is what makes the demo notebook
-valuable as a template: attendees learn the pattern here, then
-apply it verbatim at real scale.
+Registry, the sweep integration, the reports — remains the same.
 
 ---
 
-## 12. Related reading
+## 11. Related reading
 
-- `docs/explainers/pxtransolver.md` — deep-dive on the
-  physics-attention mechanism.
-- `docs/explainers/cfd_surrogate_models.md` — the three families of
-  CFD surrogate model (image-grid CNNs vs graph nets vs
-  point-cloud transformers) and where Transolver sits.
-- `docs/explainers/surrogate_ml_hodges.pdf` — the Hodges blog that
-  motivated the workshop's second half. Highly recommended as
-  independent reading; this document paraphrases it and extends
-  the framing for our workshop context.
-- Wu, Luo, Wang, Long. *Transolver: A Fast Transformer Solver for
-  PDEs on General Geometries.* ICML 2024.
-- NASA CRM-HL landing page for the aircraft geometry itself.
-- AIAA CFD High-Lift Prediction Workshop series for the validation
-  history that HiLiftAeroML now builds on.
+1. [A Beginner’s Tutorial: the new HiLiftAeroML dataset with code to train a ML surrogate](https://hodgesj.substack.com/p/a-beginners-tutorial-the-new-hiliftaeroml)
+2. [Scaling Physics AI for Automotive Aerodynamics](https://www.physicsx.ai/newsroom/scaling-physics-ai-for-automotive-aerodynamics)
+3. [Transolver: A Fast Transformer Solver for PDEs on General Geometries](https://arxiv.org/pdf/2402.02366)

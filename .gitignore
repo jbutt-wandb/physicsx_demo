@@ -22,8 +22,8 @@ context/
 notebooks/archive
 notebooks/artifacts
 notebooks/wandb_emea
-notebooks/advanced/**
-notebooks/hiliftaeroml/**
+notebooks/advanced/
+notebooks/hiliftaeroml/
 
 src/**
 
