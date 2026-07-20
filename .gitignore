@@ -24,6 +24,7 @@ notebooks/artifacts
 notebooks/wandb_emea
 notebooks/advanced/
 notebooks/hiliftaeroml/
+notebooks/dataset_config.json
 
 src/**
 
