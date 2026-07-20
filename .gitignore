@@ -34,3 +34,6 @@ docs/explainers/cfd_surrogate_models.md
 docs/explainers/further_reading.md
 docs/explainers/pxtransolver.md
 docs/explainers/surrogate_ml_hodges.pdf
+
+artifacts/
+*.executed.ipynb

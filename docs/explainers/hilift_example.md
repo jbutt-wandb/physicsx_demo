@@ -1,6 +1,6 @@
 # The HiLift point-cloud surrogate
 
- Before you
+Before you
 open the notebooks, read this to understand *what* problem the
 example solves, *why* the dataset choice matters, and *how* the
 W&B story maps onto a real computational fluid dynamics (CFD)
